@@ -5,16 +5,23 @@
 <%= name %>
 </title>
 <meta charset="utf-8">
+<style>
+span.dotFileCommentChars {color:white;}
+h1, h2 {text-align:center;}
+</style>
 <script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>
 </head>
 <body>
-	<h1>DotGraph Proofing Format</h1>
+	<h1><span class="dotFileCommentChars">#</span>DotGraph Proofing Format</h1>
 	<div>
-		If rendering of the graph fails (and you only see the dot source file) or if you want a different format, the dot source can also be rendered into a graph using the free desktop program <a href="http://www.graphviz.org/">Graphviz</a>, or rendered online at <a href="http://stamm-wilbrandt.de/GraphvizFiddle/">GraphvizFiddle</a> or <a href="http://www.webgraphviz.com">WebGraphviz</a>.
+		<span class="dotFileCommentChars">#</span>If rendering of the graph fails (i.e., you only see the dot source file) or if you want a different format, the dot source can also be rendered using the free desktop program <a href="http://www.graphviz.org/">Graphviz</a>, or rendered online at <a href="http://stamm-wilbrandt.de/GraphvizFiddle/">GraphvizFiddle</a> or <a href="http://www.webgraphviz.com">WebGraphviz</a>.
 	</div>
-	<h2>Graph (SVG)</h2>
+	<h2><span class="dotFileCommentChars">#</span>Graph</h2>
+	<div>
+		<span class="dotFileCommentChars">#</span>Notes:  The start node is double-circled.  Nodes that are linked but do not exist are colored white; all other nodes are colored in shades of red (short) to green (long) based on the relative length of their contents.  The image format is SVG.
+	</div>
 	<div id="graph"></div>
-	<h2>Dot Source</h2>
+	<h2><span class="dotFileCommentChars">#</span>Dot Source</h2>
 	<pre id="dotfile"></pre>
 	
 <%= passages %>

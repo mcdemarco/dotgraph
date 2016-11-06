@@ -3,6 +3,10 @@ window.onload = function() {
 
 		window.DotGraph = {
 
+			maxLength: 1,
+			startNode: 1,
+			storyTitle: "UNTITLED",
+			
 			convert: function() {
 				var output = this.export();
 				document.getElementById("dotfile").innerHTML = output;
@@ -12,21 +16,13 @@ window.onload = function() {
 			
 			export: function() {
 				var buffer = [];
+				this.setVariables();
 
-				buffer.push("digraph ");
-
-				var storyData = window.document.getElementsByTagName("tw-storydata");
-				if (storyData) {
-					buffer.push(this.scrub(storyData[0].getAttribute("name")));
-				} else {
-					buffer.push("UNTITLED");
-				}
-
-				buffer.push(" {\r\n\r\n");
+				buffer.push("digraph " + this.storyTitle + " {\r\n\r\n");
 
 				var passages = window.document.getElementsByTagName("tw-passagedata");
 				for (var i = 0; i < passages.length; ++i) {
-					buffer.push(this.buildPassageFromElement(passages[i]));
+					buffer.push(this.parsePassageFromElement(passages[i]));
 				}
 
 				buffer.push("}\r\n");
@@ -35,35 +31,41 @@ window.onload = function() {
 			},
 
 			
-			buildPassageFromElement: function(passage) {
+			parsePassageFromElement: function(passage) {
 				var name = passage.getAttribute("name");
-				var tags;
+				var tags = [];
+
+				if (passage.getAttribute("pid") == this.startNode) {
+					tags.push("shape=doublecircle");
+				}
 				if (!name) {
 					name = this.scrub("Untitled Passage");
-				} else if (name == "Start") {
-					tags = ("style=filled");
 				}
 				var content = passage.textContent;
 				
-				return this.buildPassage(name, tags, content);
+				return this.parsePassage(name, tags, content);
 			},
 	
 	
-			buildPassage: function(title, tags, content) {
+			parsePassage: function(title, tags, content) {
 				var result = [];
 				var scrubbedTitle = this.scrub(title);
+
+				tags.push("style=filled");
+				var hue = Math.round(100 * (content.length / this.maxLength) / 3)/100;  //HSV red-to-green range
+				tags.push("fillcolor=\"" + hue + ",.66,.85\"");
 				
 				result.push(scrubbedTitle); //Push the node, in case there are no links.
 				if (tags) {
-					result.push(" [",tags,"]");
+					result.push(" [" + tags.join(' ') + "]");
 				}
-				result.push("\r\n", this.extractLinks(content, scrubbedTitle),"\r\n");
+				result.push("\r\n", this.parseLinks(content, scrubbedTitle),"\r\n");
 				
 				return result.join('');
 			},
 
 			
-			extractLink: function(target) {
+			parseLink: function(target) {
 				//Parsing code for the various formats adapted from Snowman.
 
 				// display|target format
@@ -93,7 +95,7 @@ window.onload = function() {
 			},
 
 			
-			extractLinks: function(content, title) {
+			parseLinks: function(content, title) {
 				var linkGraph = "";
 				var re = /\[\[(.*?)\]\]/g;
 				var targetArray;
@@ -105,7 +107,7 @@ window.onload = function() {
 					content = content.replace(/^\/\/.*(\r\n?|\n)/g, '');
 					
 					while ((targetArray = re.exec(content)) !== null) {
-						var target = this.extractLink(targetArray[1]);
+						var target = this.parseLink(targetArray[1]);
 						if (/^\w+:\/\/\/?\w/i.test(target)) {
 							// do nothing with external links
 						}	else {
@@ -123,6 +125,27 @@ window.onload = function() {
 					title = '"' + title + '"';
 				}
 				return title;
+			},
+
+			
+			setVariables: function() {
+				//Avoid division by zero in corner case by pretending we have non-empty passages.
+				//Note that we haven't cleaned out comments yet, and never clean script,
+				//so the maxLength may be too long.
+				var storyData = window.document.getElementsByTagName("tw-storydata");
+				
+				if (storyData) {
+					this.storyTitle = this.scrub(storyData[0].getAttribute("name"));
+					this.startNode = storyData[0].getAttribute("startnode");
+				} else {
+					this.storyTitle = "UNTITLED";
+				}
+
+				var passages = document.querySelectorAll("tw-passagedata");
+				for (var p = 0; p < passages.length; p++) {
+					if (passages[p].innerText.length > this.maxLength)
+						this.maxLength = passages[p].innerText.length;
+				}
 			}
 
 		};		
