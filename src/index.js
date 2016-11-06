@@ -1,5 +1,3 @@
-var filesaver = require("filesaver.js-npm");
-
 window.onload = function() {
 	if (typeof(window.DotGraph) == "undefined") {
 
@@ -7,9 +5,8 @@ window.onload = function() {
 
 			convert: function() {
 				var output = this.export();
-
-				var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-				filesaver.saveAs(blob, "dotgraph" + Date.now() + ".txt", true);
+				document.getElementById("dotfile").innerHTML = output;
+				document.getElementById("graph").innerHTML = Viz(output,"svg");
 			},
 
 			
