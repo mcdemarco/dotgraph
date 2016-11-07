@@ -10,7 +10,9 @@ DotGraph may fail to draw the graph in some versions of Twine 2 due to issues wi
 
 ## Versions
 
-Unreleased:  optional clustering by (first) tags.
+### 1.1.2
+
+Optional clustering by (first) tags.
 
 ### 1.1.1
 

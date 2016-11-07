@@ -172,11 +172,14 @@ window.onload = function() {
 				}
 
 				this.clusters = ""; //For repeated presses of the button.
+				var clusterIndex = 0;
 				for (var tag in tagObject) {
 					if (tagObject.hasOwnProperty(tag)) {
-						this.clusters += "\r\nsubgraph cluster_" + tag + " {\r\n" + "label=" + tag + "\r\n";
+						this.clusters += "subgraph cluster_" + clusterIndex + " {\r\n";
+						this.clusters += "label=" + this.scrub(tag) + "\r\n";
 						this.clusters += "style=\"rounded, filled\" fillcolor=\"ivory\"\r\n";
 						this.clusters += tagObject[tag].join(" \r\n") + "}\r\n\r\n";
+						clusterIndex++;
 					}
 				}
 			}
