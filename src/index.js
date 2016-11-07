@@ -159,15 +159,18 @@ window.onload = function() {
 				for (var p = 0; p < passages.length; p++) {
 					if (passages[p].innerText.length > this.maxLength)
 						this.maxLength = passages[p].innerText.length;
-					
-					//We only consider one tag, to keep it simple.
-					firstTag = passages[p].getAttribute("tags").split(" ")[0];
-					if (firstTag) {
-						scrubbedTitle = this.parsePassageName(passages[p]);
-						if (!tagObject.hasOwnProperty(firstTag)) {
-							tagObject[firstTag] = [];
+
+					//Scrivener!
+					if (passages[p].getAttribute("tags") != "No Label") {
+						//We only consider one tag, to keep it simple.
+						firstTag = passages[p].getAttribute("tags").split(" ")[0];
+						if (firstTag) {
+							scrubbedTitle = this.parsePassageName(passages[p]);
+							if (!tagObject.hasOwnProperty(firstTag)) {
+								tagObject[firstTag] = [];
+							}
+							tagObject[firstTag].push(scrubbedTitle);
 						}
-						tagObject[firstTag].push(scrubbedTitle);
 					}
 				}
 
