@@ -3,23 +3,27 @@ window.onload = function() {
 
 		window.DotGraph = {
 
+			clusters: "",
 			maxLength: 1,
 			startNode: 1,
 			storyTitle: "UNTITLED",
 			
-			convert: function() {
-				var output = this.export();
+			convert: function(clustered) {
+				var output = this.export(clustered);
 				document.getElementById("dotfile").innerHTML = output;
 				document.getElementById("graph").innerHTML = Viz(output,"svg");
 			},
 
 			
-			export: function() {
+			export: function(clustered) {
 				var buffer = [];
 				this.setVariables();
 
 				buffer.push("digraph " + this.storyTitle + " {\r\n\r\n");
 
+				if (clustered)
+					buffer.push(this.clusters);
+				
 				var passages = window.document.getElementsByTagName("tw-passagedata");
 				for (var i = 0; i < passages.length; ++i) {
 					buffer.push(this.parsePassageFromElement(passages[i]));
@@ -32,36 +36,39 @@ window.onload = function() {
 
 			
 			parsePassageFromElement: function(passage) {
-				var name = passage.getAttribute("name");
-				var tags = [];
+				var name = this.parsePassageName(passage);
+				var styles = [];
 
 				if (passage.getAttribute("pid") == this.startNode) {
-					tags.push("shape=doublecircle");
-				}
-				if (!name) {
-					name = this.scrub("Untitled Passage");
+					styles.push("shape=doublecircle");
 				}
 				var content = passage.textContent;
 				
-				return this.parsePassage(name, tags, content);
+				return this.parsePassage(name, styles, content);
 			},
 	
 	
-			parsePassage: function(title, tags, content) {
+			parsePassage: function(scrubbedTitle, styles, content) {
 				var result = [];
-				var scrubbedTitle = this.scrub(title);
 
-				tags.push("style=filled");
+				styles.push("style=filled");
 				var hue = Math.round(100 * (content.length / this.maxLength) / 3)/100;  //HSV red-to-green range
-				tags.push("fillcolor=\"" + hue + ",.66,.85\"");
+				styles.push("fillcolor=\"" + hue + ",.66,.85\"");
 				
 				result.push(scrubbedTitle); //Push the node, in case there are no links.
-				if (tags) {
-					result.push(" [" + tags.join(' ') + "]");
+				if (styles) {
+					result.push(" [" + styles.join(' ') + "]");
 				}
 				result.push("\r\n", this.parseLinks(content, scrubbedTitle),"\r\n");
 				
 				return result.join('');
+			},
+
+			
+			parsePassageName: function(passage) {
+				var name = passage.getAttribute("name") ? passage.getAttribute("name") : "Untitled Passage";
+				name = this.scrub(name);
+				return name;
 			},
 
 			
@@ -140,16 +147,36 @@ window.onload = function() {
 				} else {
 					this.storyTitle = "UNTITLED";
 				}
-
+				
+				var tagObject = {};
+				var tagList = [];
+				var firstTag, scrubbedTitle;
 				var passages = document.querySelectorAll("tw-passagedata");
 				for (var p = 0; p < passages.length; p++) {
 					if (passages[p].innerText.length > this.maxLength)
 						this.maxLength = passages[p].innerText.length;
+					
+					//We only consider one tag, to keep it simple.
+					firstTag = passages[p].getAttribute("tags").split(" ")[0];
+					if (firstTag) {
+						scrubbedTitle = this.parsePassageName(passages[p]);
+						if (!tagObject.hasOwnProperty(firstTag)) {
+							tagObject[firstTag] = [];
+						}
+						tagObject[firstTag].push(scrubbedTitle);
+					}
+				}
+
+				for (var tag in tagObject) {
+					if (tagObject.hasOwnProperty(tag)) {
+						this.clusters += "\r\nsubgraph cluster_" + tag + " {\r\n" + "label=" + tag + "\r\n";
+						this.clusters += "style=\"rounded, filled\" fillcolor=\"ivory\"\r\n";
+						this.clusters += tagObject[tag].join(" \r\n") + "}\r\n\r\n";
+					}
 				}
 			}
-
 		};		
 	};
 
-	window.DotGraph.convert();
+	window.DotGraph.convert(false);
 };
