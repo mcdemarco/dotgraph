@@ -3,15 +3,19 @@ window.onload = function() {
 
 		window.DotGraph = {
 
+			cluster: false,
 			clusters: "",
 			maxLength: 1,
 			startNode: 1,
 			storyTitle: "UNTITLED",
 			
-			convert: function(clustered) {
-				var output = this.export(clustered);
-				document.getElementById("dotfile").innerHTML = output;
+			convert: function() {
+				var output = this.export(this.cluster);
+				var dotTextarea = document.getElementById("dotfile");
+				dotTextarea.innerHTML = output;
+				dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
 				document.getElementById("graph").innerHTML = Viz(output,"svg");
+				this.cluster = !this.cluster;
 			},
 
 			
@@ -167,6 +171,7 @@ window.onload = function() {
 					}
 				}
 
+				this.clusters = ""; //For repeated presses of the button.
 				for (var tag in tagObject) {
 					if (tagObject.hasOwnProperty(tag)) {
 						this.clusters += "\r\nsubgraph cluster_" + tag + " {\r\n" + "label=" + tag + "\r\n";
