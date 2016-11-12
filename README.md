@@ -10,6 +10,14 @@ DotGraph may fail to draw the graph in some versions of Twine 2 due to issues wi
 
 ## Versions
 
+### 1.1.4
+
+Added various configuration options, scaling, and some statistics.
+
+### 1.1.3
+
+Decoration of terminal passages (either leaves, or marked with a tag "End").
+
 ### 1.1.2
 
 Optional clustering by (first) tags.

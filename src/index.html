@@ -6,7 +6,9 @@
 </title>
 <meta charset="utf-8">
 <style>
-body {margin:3%;}
+ body {margin:3%;}
+ tw-storydata {display:none;}
+ span#stats {font-style:italic;}
 </style>
 <script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>
 </head>
@@ -16,14 +18,31 @@ body {margin:3%;}
 		If rendering of the graph fails (i.e., you only see the dot source file), you want a different format, or you want to edit your graph, the dot source can also be rendered using the free desktop program <a href="http://www.graphviz.org/">Graphviz</a>, or rendered online at <a href="http://stamm-wilbrandt.de/GraphvizFiddle/">GraphvizFiddle</a> or <a href="http://www.webgraphviz.com">WebGraphviz</a>.
 	</div>
 	<h2>Graph</h2>
-	<div style="font-size:smaller;">
-		Notes:  The start node is double-circled.  Nodes that are linked but do not exist are colored white; all other nodes are colored in shades of red (short) to green (long) based on the relative length of their contents.  The image format is SVG.  Optional clustering uses the first tag on each passage.
+	<div style="font-size:smaller;width:50%; float:right;">
+		Notes:  The start node is double-circled.  When color is on, nodes that are linked but do not exist are colored white and all other nodes are colored in shades of red (short) to green (long) based on the relative length of their contents.  The image format is SVG.  Optional clustering uses the first tag on each passage.  Optional detection of an "End" tag adds diagonals to "End" passages.  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.
 	</div>
 	<div>
-		<button type="button" id="clusterUnclusterButton" onclick="window.DotGraph.convert();">Cluster/Uncluster</button>
+		<span id="stats">
+			<span id="nodeCount">0</span>&nbsp;nodes, 
+			<span id="leafCount">0</span>&nbsp;leaves<span id="looseCount"></span>,
+			<span id="linkCount">0</span>&nbsp;links, and
+			<span id="average">0</span>&nbsp;links&nbsp;per&nbsp;node.
+		</span><br/>
+		<input type="checkbox" id="nodeCheckbox" checked/>&nbsp;<label for="nodeCheckbox">Show node names</label><br />
+		<input type="checkbox" id="clusterCheckbox"/>&nbsp;<label for="clusterCheckbox">Cluster by tags</label><br/>
+		<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="none"/>&nbsp;<label for="colorCheckbox0">Black & white</label>
+		<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="node" checked/>&nbsp;<label for="colorCheckbox1">Color by node length</label>
+		<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag"/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/>
+		<input type="checkbox" id="checkpointsCheckbox" checked/>&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label>
+		<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label><br/>
+		<button type="button" id="rerunButton" onclick="window.DotGraph.convert();">Redraw</button>
+		<button type="button" id="rerunButton" onclick="window.DotGraph.rotate();">Rotate</button>
+		<button type="button" id="rerunButton" onclick="window.DotGraph.scale();">Scale to fit</button>
 	</div>
 	<div id="graph" style="clear:both;"></div>
 	<h2>Dot Source</h2>
+	<button type="button" id="rerunButton" onclick="window.DotGraph.edit();">Redraw with edits</button><br/>
+	
 	<textarea id="dotfile" style="width:100%;"></textarea>
 	
 <%= passages %>
