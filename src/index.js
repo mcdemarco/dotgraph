@@ -125,14 +125,14 @@ window.onload = function() {
 				var content = passage.textContent;
 				var firstTag = this.getFirstTag(passage);
 				
-				return this.parsePassage(pid, name, styles, content, firstTag);
+				return this.parsePassage(name, styles, content, firstTag);
 			},
 
 	
-			parsePassage: function(pid, scrubbedTitle, styles, content, tag) {
+			parsePassage: function(scrubbedTitleOrPid, styles, content, tag) {
 				var result = [];
 				var hue = 0;
-				var parsedLinks = this.parseLinks(content, scrubbedTitle, pid);
+				var parsedLinks = this.parseLinks(content, scrubbedTitleOrPid);
 				this.links += parsedLinks.length;
 
 				if (parsedLinks.length === 0)
@@ -158,10 +158,8 @@ window.onload = function() {
 				}
 
 				//Push the node, in case there are no links.
-				if (this.showNodeNames)
-					result.push(scrubbedTitle);
-				else
-					result.push(pid);
+				result.push(scrubbedTitleOrPid);
+
 				if (styles.length) {
 					result.push(" [" + styles.join(' ') + "]");
 				}
@@ -171,9 +169,15 @@ window.onload = function() {
 			},
 
 			
-			parsePassageName: function(passage) {
-				var name = passage.getAttribute("name") ? passage.getAttribute("name") : "Untitled Passage";
-				name = this.scrub(name);
+			parsePassageName: function(passage,returnName) {
+				//Sometimes used to get the real name (returnName), sometimes the pids.
+				var name;
+				if (this.showNodeNames || returnName) {
+					name = passage.getAttribute("name") ? passage.getAttribute("name") : "Untitled Passage";
+					name = this.scrub(name);
+				} else {
+					name = passage.getAttribute("pid") ? passage.getAttribute("pid") : this.scrub("Untitled Passage");
+				}
 				return name;
 			},
 
@@ -208,7 +212,7 @@ window.onload = function() {
 			},
 
 			
-			parseLinks: function(content, title, pid) {
+			parseLinks: function(content, titleOrPid) {
 				var linkGraph = [];
 				var re = /\[\[(.*?)\]\]/g;
 				var targetArray;
@@ -223,10 +227,8 @@ window.onload = function() {
 						var target = this.parseLink(targetArray[1]);
 						if (/^\w+:\/\/\/?\w/i.test(target)) {
 							// do nothing with external links
-						}	else if (this.showNodeNames) {
-							linkGraph.push(title + " -> " + this.scrub(target));
-						} else {
-							linkGraph.push(pid + " -> " + this.getIdFromTarget(target));
+						}	else {
+							linkGraph.push(titleOrPid + " -> " + (this.showNodeNames ? this.scrub(target) : this.getIdFromTarget(target)));
 						}
 					}
 				}
@@ -285,7 +287,7 @@ window.onload = function() {
 				var tagObject = {};
 				this.tagList = [];
 				this.targetObject = {};
-				var tagArray, firstTag, scrubbedTitle;
+				var tagArray, firstTag, scrubbedTitle, scrubbedTitleOrPid;
 				var passages = document.querySelectorAll("tw-passagedata");
 				for (var p = 0; p < passages.length; p++) {
 					if (passages[p].innerText.length > this.maxLength)
@@ -295,9 +297,10 @@ window.onload = function() {
 							this.tightEnds++;
 					}
 
-					scrubbedTitle = this.parsePassageName(passages[p]);
+					scrubbedTitle = this.parsePassageName(passages[p],true);
+					scrubbedTitleOrPid = this.parsePassageName(passages[p]);
 					if (passages[p].pid == this.startNode)
-						this.startNodeName = this.parsePassageName(passages[p]);
+						this.startNodeName = scrubbedTitleOrPid;
 					
 					firstTag = this.getFirstTag(passages[p]);
 					if (firstTag) {
@@ -305,7 +308,7 @@ window.onload = function() {
 							tagObject[firstTag] = [];
 							this.tagList.push(firstTag);
 						}
-						tagObject[firstTag].push(scrubbedTitle);
+						tagObject[firstTag].push(scrubbedTitleOrPid);
 					}
 
 					this.targetObject[scrubbedTitle] = passages[p].getAttribute("pid");
@@ -352,4 +355,5 @@ window.onload = function() {
 	};
 
 	window.DotGraph.convert();
+
 };
