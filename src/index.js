@@ -1,3 +1,5 @@
+var filesaver = require("filesaver.js-npm");
+
 window.onload = function() {
 	if (typeof(window.DotGraph) == "undefined") {
 
@@ -12,7 +14,6 @@ window.onload = function() {
 			colorByTag: false,
 			ends: true,
 			endTag: "End",
-			hueList: [],
 			leaves: 0,
 			links: 0,
 			maxLength: 1,
@@ -24,6 +25,13 @@ window.onload = function() {
 			tagList: [],
 			targetObject: {},
 			tightEnds: 0,
+      palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
+								"#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FC1CBF",
+								"#C4451C", "#1CBE4F", "#C075A6", "#90AD1C", "#B00068",
+								"#AA0DFE", "#FA0087", "#F8A19F", "#1CFFCE", "#F6222E", 
+								"#85660D", "#325A9B", "#B10DA1", "#a0a0a0", "#782AB6",
+								"#565656"],
+
 			
 			convert: function() {
 				var output = this.export();
@@ -68,7 +76,7 @@ window.onload = function() {
 				document.getElementById("linkCount").innerHTML = this.links;
 				if (this.ends) {
 					var looseEnds = this.leaves - this.tightEnds;
-					document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose ends)";
+					document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds > 1 ? "s" : "") + ")";
 				} else {
 					document.getElementById("looseCount").innerHTML = "";
 				}
@@ -109,7 +117,7 @@ window.onload = function() {
 					return false;
 			},
 
-			
+
 			parsePassageFromElement: function(passage) {
 				var name = this.parsePassageName(passage);
 				var pid = passage.getAttribute("pid");
@@ -153,8 +161,8 @@ window.onload = function() {
 				} else if (this.colorByTag && tag) {
 					var indx = this.tagList.indexOf(tag);
 					if (indx > -1)
-						hue = this.hueList[indx]; //HSV spread across tags
-					styles.push("fillcolor=\"" + hue + ",0.25,0.85\"");
+						hue = this.palette[indx%26]; //color alphabet colors
+					styles.push("fillcolor=\"" + hue + "\"");
 				}
 
 				//Push the node, in case there are no links.
@@ -249,7 +257,22 @@ window.onload = function() {
 				svgElt.removeAttribute("height");
 			},
 
-			
+
+			save: function(mimeType) {
+				var blob;
+				var output = document.getElementById("dotfile").value;
+				if (mimeType == "txt") {
+					blob = new Blob([output], {type: "text/plain;charset=utf-8"});
+					filesaver.saveAs(blob, "dot" + Date.now() + ".txt", true);
+				} else if (mimeType == "svg") {
+					//Having trouble reading this off the page, so regenerate it.
+					var preblob = Viz(output,"svg").replace("no","yes");
+					blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
+					filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
+				}
+			},
+
+
 			scrub: function(title) {
 				if (title) { // dangerously scrubbing non-ascii characters for graphviz bug
 					title = title.replace(/"/gm,"\\\"").replace(/[^\x00-\x7F]/g, "");
@@ -314,13 +337,6 @@ window.onload = function() {
 					this.targetObject[scrubbedTitle] = passages[p].getAttribute("pid");
 				}
 
-				this.hueList = [0];
-				if (this.tagList.length) {
-					for (var t=0; t<this.tagList.length; t++) {
-						this.hueList[t] = Math.round(100 * t * 1/(this.tagList.length))/100;
-					}
-				}
-				
 				this.clusters = ""; //For repeated presses of the button.
 				var clusterIndex = 0;
 				for (var tag in tagObject) {
@@ -341,7 +357,7 @@ window.onload = function() {
 				for (var t=0; t<this.tagList.length; t++) {
 					tagName = this.scrub(this.tagList[t]);
 					tagKey += tagName + " [shape=rect ";
-					tagKey += "style=\"filled,rounded\" fillcolor=\"" + this.hueList[t] + ",0.25,0.85\"]\r\n";
+					tagKey += "style=\"filled,rounded\" fillcolor=\"" + this.palette[t%26] + "\"]\r\n";
 				}
 				tagKey += "}\r\n";
 				

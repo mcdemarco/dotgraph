@@ -19,7 +19,7 @@
 	</div>
 	<h2>Graph</h2>
 	<div style="font-size:smaller;width:50%; float:right;">
-		Notes:  The start node is double-circled.  When color is on, nodes that are linked but do not exist are colored white and all other nodes are colored in shades of red (short) to green (long) based on the relative length of their contents.  The image format is SVG.  Optional clustering uses the first tag on each passage.  Optional detection of an "End" tag adds diagonals to "End" passages.  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.
+		Notes:  The start node is double-circled.  When color by length is on, nodes that are linked but do not exist are colored white and all other nodes are colored in shades of red (short) to green (long) based on the relative length of their contents.  The cluster and color by tag options use the first tag on each passage.  Optional detection of an "End" tag adds diagonals to "End" passages.  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  The image format is SVG.
 	</div>
 	<div>
 		<span id="stats">
@@ -38,10 +38,12 @@
 		<button type="button" id="rerunButton" onclick="window.DotGraph.convert();">Redraw</button>
 		<button type="button" id="rerunButton" onclick="window.DotGraph.rotate();">Rotate</button>
 		<button type="button" id="rerunButton" onclick="window.DotGraph.scale();">Scale to fit</button>
+		<button type="button" id="saveSvgButton" onclick="window.DotGraph.save('svg');">Save</button><br/>
 	</div>
 	<div id="graph" style="clear:both;"></div>
 	<h2>Dot Source</h2>
-	<button type="button" id="rerunButton" onclick="window.DotGraph.edit();">Redraw with edits</button><br/>
+	<button type="button" id="rerunButton" onclick="window.DotGraph.edit();">Redraw with edits</button>
+	<button type="button" id="saveDotButton" onclick="window.DotGraph.save('txt');">Save</button><br/>
 	
 	<textarea id="dotfile" style="width:100%;"></textarea>
 	

@@ -8,7 +8,13 @@ To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [ht
 
 DotGraph may fail to draw the graph in some versions of Twine 2 due to issues with Chrome; in that case it will still give you the text of the dot source file, as well as some links to sites online that will render it for you.
 
+DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
+
 ## Versions
+
+### 1.1.5
+
+Added saving (except possibly on Safari).
 
 ### 1.1.4
 
