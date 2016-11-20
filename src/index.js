@@ -14,7 +14,7 @@ window.onload = function() {
 								 ends: true,
 								 endTag: "End",
 								 rotation: 0,
-								 showNodeNames: true,
+								 showNodeNames: false,
 								 palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
 													 "#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FC1CBF",
 													 "#C4451C", "#1CBE4F", "#C075A6", "#90AD1C", "#B00068",
@@ -135,11 +135,14 @@ window.onload = function() {
 				var content = passage.content;
 				var firstTag = passage.firstTag;
 				
-				return this.parsePassage(name, styles, content, firstTag);
+				return this.parsePassage(passage, styles);
 			},
 
 	
-			parsePassage: function(scrubbedTitleOrPid, styles, content, tag) {
+			parsePassage: function(passage, styles) {
+				var scrubbedTitleOrPid = passage.scrubbedTitleOrPid;
+				var content = passage.content;
+				var tag = passage.firstTag;
 				var result = [];
 				var hue = 0;
 				var parsedLinks = this.parseLinks(content, scrubbedTitleOrPid);
@@ -169,10 +172,9 @@ window.onload = function() {
 
 				//Push the node, in case there are no links.
 				result.push(scrubbedTitleOrPid);
+				styles.push("tooltip=" + passage.scrubbedTitle);
 
-				if (styles.length) {
-					result.push(" [" + styles.join(' ') + "]");
-				}
+				result.push(" [" + styles.join(' ') + "]");
 				result.push("\r\n", parsedLinks.join("\r\n"), "\r\n");
 				
 				return result.join('');
