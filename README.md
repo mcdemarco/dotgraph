@@ -1,8 +1,10 @@
 # DotGraph
 
-DotGraph is a proofing format for Twine 2 that generates a GraphViz image of your story nodes.
+DotGraph is a proofing format for Twine 1 and 2 that generates a GraphViz image of your story nodes.
 
 To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [https://mcdemarco.net/tools/scree/dotgraph/format.js](https://mcdemarco.net/tools/scree/dotgraph/format.js).
+
+To add DotGraph to Twine 1, download this file:  [https://mcdemarco.net/tools/scree/dotgraph/format.js](https://mcdemarco.net/tools/scree/dotgraph/header.html).  Create a new folder called dotgraph for it inside your targets folder, and put it inside.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
 
 ## Troubleshooting
 
@@ -11,6 +13,10 @@ DotGraph may fail to draw the graph in some versions of Twine 2 due to issues wi
 DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
 
 ## Versions
+
+### 1.1.6
+
+Added support for Twine 1.x, and some refactoring.
 
 ### 1.1.5
 

@@ -23,5 +23,9 @@ module.exports = function(grunt) {
 		);
 	});
 
-	grunt.registerTask('package', ['build:release', 'package:icon', 'package:format']);
+	grunt.registerTask('package:header', function() {
+		grunt.file.copy('build/header.html', 'dist/' + pkg.name + '/header.html');
+	});
+
+	grunt.registerTask('package', ['build:release', 'package:icon', 'package:format', 'package:header']);
 };
