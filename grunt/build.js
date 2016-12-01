@@ -42,26 +42,54 @@ module.exports = function(grunt) {
 		var data = {
 			name: '{{STORY_NAME}}',
 			passages: '{{STORY_DATA}}',
+			vizScript: '<script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
 		grunt.file.write('build/format.html', template(data));
 	});
 
-	grunt.registerTask('html:twine1', function() {
+	grunt.registerTask('html:offline', function() {
+		var template = _.template(grunt.file.read('src/index.html'));
+
+		var data = {
+			name: '{{STORY_NAME}}',
+			passages: '{{STORY_DATA}}',
+			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script>',
+			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
+		};
+
+		grunt.file.write('build/offline/format.html', template(data));
+	});
+
+	grunt.registerTask('html:release1', function() {
 		var template = _.template(grunt.file.read('src/index.html'));
 
 		var data = {
 			name: 'DotGraph',
 			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
+			vizScript: '<script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
 		grunt.file.write('build/header.html', template(data));
 	});
 
+	grunt.registerTask('html:offline1', function() {
+		var template = _.template(grunt.file.read('src/index.html'));
+
+		var data = {
+			name: 'DotGraph',
+			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
+			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script>',
+			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
+		};
+
+		grunt.file.write('build/offline/header.html', template(data));
+	});
+
 	grunt.registerTask('build', ['browserify:default']);
-	grunt.registerTask('build:release', ['browserify:release', 'html:release', 'html:twine1']);
+	grunt.registerTask('build:release', ['browserify:release', 'html:release', 'html:offline', 'html:release1', 'html:offline1']);
 	grunt.registerTask('default', ['build']);
 	grunt.registerTask('dev', ['build', 'watch']);
 };
