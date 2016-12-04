@@ -16,18 +16,20 @@ window.onload = function() {
 								 rotation: 0,
 								 showNodeNames: false,
 								 palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
-													 "#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FC1CBF",
-													 "#C4451C", "#1CBE4F", "#C075A6", "#90AD1C", "#B00068",
-													 "#AA0DFE", "#FA0087", "#F8A19F", "#1CFFCE", "#F6222E", 
+													 "#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FA0087",
+													 "#F8A19F", "#1CBE4F", "#C4451C", "#C075A6", "#90AD1C", 
+													 "#B00068", "#AA0DFE", "#FC1CBF", "#1CFFCE", "#F6222E", 
 													 "#85660D", "#325A9B", "#B10DA1", "#a0a0a0", "#782AB6",
 													 "#565656"]
 								},
+
 			story: {title: "Untitled", 
 							startNode: 1, 
 							startNodeName: "Start", 
 							leaves: 0, 
 							links: 0,
 							tightEnds: 0,
+							avLength: 1,
 							maxLength: 1,
 							passages: [],
 							tags: [],
@@ -37,25 +39,37 @@ window.onload = function() {
  
 			
 			convert: function() {
+
+				//Get the dot graph source.
 				var output = this.export();
+
+				//Write the dot graph text to the page.
 				var dotTextarea = document.getElementById("dotfile");
 				dotTextarea.value = output;
 				dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
+
+				//Do the conversion and write the svg to the page.
 				document.getElementById("graph").innerHTML = Viz(output,"svg");
+
 			},
 
 			
 			edit: function() {
-				var output = document.getElementById("dotfile").value;
-				document.getElementById("graph").innerHTML = Viz(output,"svg");
+				//The user can edit the dot graph and rerender it.
+				var editedOutput = document.getElementById("dotfile").value;
+				document.getElementById("graph").innerHTML = Viz(editedOutput,"svg");
 			},
 
 			
 			export: function() {
+				//Parse the story and return the dot graph source.
 				var buffer = [];
 				var rotations = ["TB","LR","BT","RL"];
 				this.parseSettings();
-				this.parseStory();
+
+				//Only reparse if necessary.
+				if (this.story.passages.length == 0)
+					this.parseStory();
 
 				buffer.push("digraph " + this.story.title + " {\r\n");
 				buffer.push("rankdir=" + rotations[this.settings.rotation] + "\r\n\r\n");
@@ -79,7 +93,7 @@ window.onload = function() {
 				document.getElementById("linkCount").innerHTML = this.story.links;
 				if (this.settings.ends) {
 					var looseEnds = this.story.leaves - this.story.tightEnds;
-					document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds > 1 ? "s" : "") + ")";
+					document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
 				} else {
 					document.getElementById("looseCount").innerHTML = "";
 				}
@@ -161,7 +175,7 @@ window.onload = function() {
 				}
 				
 				if (this.settings.colorByNode) {
-					hue = Math.round(100 * (content.length / this.story.maxLength) / 3)/100;  //HSV red-to-green range
+					hue = Math.round(100 * (Math.min(1.75, content.length / this.story.avLength)) / 3)/100;  //HSV red-to-green range
 					styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 				} else if (this.settings.colorByTag && tag) {
 					var indx = this.story.tags.indexOf(tag);
@@ -297,9 +311,10 @@ window.onload = function() {
 
 			
 			parseStory: function() {
+				//Parse the story from the relevant Twine 1 or Twine 2 source data.
 				//Avoid division by zero in corner case by pretending we have non-empty passages.
 				//Note that we haven't cleaned out comments yet, and never clean script,
-				//so the maxLength may be too long.
+				//so the passage lengths may be inaccurate.
 				var p;
 				var source;
 
@@ -368,8 +383,6 @@ window.onload = function() {
 				this.story.tags = [];
 				this.story.targets = {};
 				for (p = 0; p < this.story.passages.length; p++) {
-					if (this.story.passages[p].textLength > this.story.maxLength)
-						this.story.maxLength = this.story.passages[p].textLength;
 					if (this.settings.ends) {
 						if (this.hasTag(this.story.passages[p],this.settings.endTag))
 							this.story.tightEnds++;
@@ -388,7 +401,11 @@ window.onload = function() {
 					}
 
 					this.story.targets[this.story.passages[p].scrubbedTitle] = this.story.passages[p].pid;
-				}
+				};
+
+				this.story.maxLength = this.story.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
+				this.story.avLength = this.story.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / this.story.passages.length;
+
 			},
 
 				
