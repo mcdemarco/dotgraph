@@ -48,5 +48,5 @@ Only built the dotfile and required an external renderer.  Not released.
 
 ## Building From Source
 
-Run `npm install` to install dependencies.  Run `grunt package` to create a release version for Twine under `dist/`.  Run `grunt --help` to list other grunt targets.
+Run `npm install` to install dependencies.  Run `grunt package` to create the release versions for Twine under `dist/`.  Run `grunt --help` to list other grunt targets.
 

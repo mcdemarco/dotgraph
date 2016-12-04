@@ -1,10 +1,6 @@
 module.exports = function(grunt) {
 	var pkg = require('../package.json');
 
-	grunt.registerTask('package:icon', function() {
-		grunt.file.copy('src/icon.svg', 'dist/' + pkg.name + '/icon.svg');
-	});
-
 	grunt.registerTask('package:format', function() {
 		var formatData = {
 			description: pkg.description,
@@ -53,5 +49,5 @@ module.exports = function(grunt) {
 		grunt.file.copy('build/offline/header.html', 'dist/Twine1/offline/' + pkg.name + '/header.html');
 	});
 
-	grunt.registerTask('package', ['build:release', 'package:icon', 'package:format', 'package:offline', 'package:header', 'package:offline1']);
+	grunt.registerTask('package', ['build:release', 'package:format', 'package:offline', 'package:header', 'package:offline1']);
 };
