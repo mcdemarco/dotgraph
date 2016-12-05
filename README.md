@@ -4,7 +4,7 @@ DotGraph is a proofing format for Twine 1 and 2 that generates a GraphViz image 
 
 To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [https://mcdemarco.net/tools/scree/dotgraph/format.js](https://mcdemarco.net/tools/scree/dotgraph/format.js).
 
-To add DotGraph to Twine 1, download this file:  [https://mcdemarco.net/tools/scree/dotgraph/format.js](https://mcdemarco.net/tools/scree/dotgraph/header.html).  Create a new folder called dotgraph for it inside your targets folder, and put it inside.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
+To add DotGraph to Twine 1, create a new folder called `dotgraph` inside your targets folder, then download this file [https://mcdemarco.net/tools/scree/dotgraph/header.html](https://mcdemarco.net/tools/scree/dotgraph/header.html) and place it inside the `dotgraph` folder.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
 
 ## Troubleshooting
 
