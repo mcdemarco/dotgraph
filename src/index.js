@@ -86,7 +86,11 @@ window.onload = function() {
 					buffer.push(this.parsePassageFromObject(this.story.passages[i]));
 				}
 
-				buffer.push("}\r\n");
+				//Push title.
+				buffer.push("\nlabelloc=\"t\"\n");
+				buffer.push("label=" + this.story.title);
+
+				buffer.push("\n}\r\n");
 				
 				document.getElementById("nodeCount").innerHTML = this.story.passages.length;
 				document.getElementById("leafCount").innerHTML = this.story.leaves;
@@ -329,6 +333,13 @@ window.onload = function() {
 						storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0]);
 					}
 					this.story.title = this.scrub(title);
+
+					var specialPassageList = ["StoryAuthor","StorySubtitle","StoryMenu","StorySettings","StoryIncludes"];
+					specialPassageList.forEach(function(specialPassage) {
+						if (storyTwine1.querySelectorAll('[tiddler="' + specialPassage + '"]').length) {
+							storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="' + specialPassage + '"]')[0]);
+						}
+					});
 
 					//Remove more extraneous Twine 1.x passages.
 					if (storyTwine1.querySelectorAll('[tiddler="StoryAuthor"]').length) {
