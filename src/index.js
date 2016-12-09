@@ -11,7 +11,8 @@ var dotGraph = {};
 								colorByTag: false,
 								ends: true,
 								endTag: "End",
-								rotation: 0,
+								rotation: "TB",
+								scale: true,
 								showNodeNames: false,
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
 													"#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FA0087",
@@ -45,9 +46,9 @@ context.graph = (function() {
 		scrub: scrub
 	};
 
-	function convert() {
+	function convert(reparse) {
 		//Get the dot graph source.
-		var output = dot();
+		var output = dot(reparse);
 		
 		//Write the dot graph text to the page.
 		var dotTextarea = document.getElementById("dotfile");
@@ -56,13 +57,17 @@ context.graph = (function() {
 		
 		//Do the conversion and write the svg to the page.
 		document.getElementById("graph").innerHTML = Viz(output,"svg");
-		
+		context.settings.scale();
 	}
 			
 	function edit() {
-		//The user can edit the dot graph and rerender it.
+		//The user can edit the dot graph and rerender it; 
+		//in that case, read the dot file from the browser and render it.
 		var editedOutput = document.getElementById("dotfile").value;
+
+		//Needs error handling?
 		document.getElementById("graph").innerHTML = Viz(editedOutput,"svg");
+		context.settings.scale();
 	}
 
 	function saveDot() {
@@ -72,28 +77,27 @@ context.graph = (function() {
  	}
 
 	function saveSvg() {
+		//Having trouble reading the existing svg off the page, so regenerate it.
 		var output = document.getElementById("dotfile").value;
-		//Having trouble reading this off the page, so regenerate it.
 		var preblob = Viz(output,"svg").replace("no","yes");
 		var blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
 		filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
  	}
 
 	//Private
-	function dot() {
-		//Parse the story and return the dot graph source.
+	function dot(reparse) {
+		//Optionally (re)parse the story and return the dot graph source.
 		var buffer = [];
-		var rotations = ["TB","LR","BT","RL"];
 		context.settings.parse();
 
 		//Only reparse if necessary.  
 		//(Needs checks on certain settings changes to work as is, 
 		//   or to separate parsing from presentation.)
-		//if (storyObj.passages.length == 0)
-		context.story.parse();
+		if (storyObj.passages.length == 0 || reparse)
+			context.story.parse();
 
 		buffer.push("digraph " + storyObj.title + " {\r\n");
-		buffer.push("rankdir=" + rotations[config.rotation] + "\r\n\r\n");
+		buffer.push("rankdir=" + config.rotation + "\r\n\r\n");
 		
 		if (config.cluster)
 			buffer.push(writeClusterCode(storyObj.tagObject));
@@ -179,18 +183,17 @@ context.init = (function() {
 
 	function load() {
 		//Onload function.
-		activateButtons();
+		activateForm();
 		context.graph.convert();
 	}
 
 	//Private.
-	function activateButtons() {
+	function activateForm() {
+		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
+
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
-		document.getElementById("rerunButton").addEventListener('click', context.graph.convert, false);
-		document.getElementById("rotateButton").addEventListener('click', context.settings.rotate, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
-		document.getElementById("scaleButton").addEventListener('click', context.settings.scale, false);
 	}
 
 })();
@@ -355,7 +358,6 @@ context.settings = (function () {
 
 	return {
 		parse: parse,
-		rotate: rotate,
 		scale: scale
 	};
 
@@ -366,18 +368,17 @@ context.settings = (function () {
 		config.colorByNode = document.getElementById("colorCheckbox1") ? document.getElementById("colorCheckbox1").checked : false;
 		config.colorByTag = document.getElementById("colorCheckbox2") ? document.getElementById("colorCheckbox2").checked : false;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
+		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
+		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
 		config.showNodeNames = document.getElementById("nodeCheckbox") ? document.getElementById("nodeCheckbox").checked : false;
 	}
 			
-	function rotate() {
-		config.rotation = (config.rotation + 1)%4;
-		context.graph.convert();
-	}
-
 	function scale() {
-		var svgElt = document.getElementsByTagName("svg")[0];
-		svgElt.setAttribute("width","100%");
-		svgElt.removeAttribute("height");
+		if (config.scale) {
+			var svgElt = document.getElementsByTagName("svg")[0];
+			svgElt.setAttribute("width","100%");
+			svgElt.removeAttribute("height");
+		}
 	}
 
 })();
