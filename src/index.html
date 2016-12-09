@@ -35,15 +35,15 @@
 		<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag"/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/>
 		<input type="checkbox" id="checkpointsCheckbox" checked/>&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label>
 		<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label><br/>
-		<button type="button" id="rerunButton" onclick="window.DotGraph.convert();">Redraw</button>
-		<button type="button" id="rerunButton" onclick="window.DotGraph.rotate();">Rotate</button>
-		<button type="button" id="rerunButton" onclick="window.DotGraph.scale();">Scale to fit</button>
-		<button type="button" id="saveSvgButton" onclick="window.DotGraph.save('svg');">Save</button><br/>
+		<button type="button" id="rerunButton">Redraw</button>
+		<button type="button" id="rotateButton">Rotate</button>
+		<button type="button" id="scaleButton">Scale to fit</button>
+		<button type="button" id="saveSvgButton">Save</button><br/>
 	</div>
 	<div id="graph" style="clear:both;"></div>
 	<h2>Dot Source</h2>
-	<button type="button" id="rerunButton" onclick="window.DotGraph.edit();">Redraw with edits</button>
-	<button type="button" id="saveDotButton" onclick="window.DotGraph.save('txt');">Save</button><br/>
+	<button type="button" id="editButton">Redraw with edits</button>
+	<button type="button" id="saveDotButton">Save</button><br/>
 	
 	<textarea id="dotfile" style="width:100%;"></textarea>
 	
