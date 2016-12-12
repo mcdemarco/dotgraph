@@ -42,8 +42,7 @@ context.graph = (function() {
 		convert: convert,
 		edit: edit,
 		saveDot: saveDot,
-		saveSvg: saveSvg,
-		scrub: scrub
+		saveSvg: saveSvg
 	};
 
 	function convert(reparse) {
@@ -88,57 +87,127 @@ context.graph = (function() {
 	function dot(reparse) {
 		//Optionally (re)parse the story and return the dot graph source.
 		var buffer = [];
+
+		//A change in the settings is what normally triggers regraphing.
 		context.settings.parse();
 
-		//Only reparse if necessary.  
+		//Only reparse if necessary.
 		//(Needs checks on certain settings changes to work as is, 
 		//   or to separate parsing from presentation.)
 		if (storyObj.passages.length == 0 || reparse)
 			context.story.parse();
 
-		buffer.push("digraph " + storyObj.title + " {\r\n");
+		buffer.push("digraph " + scrub(storyObj.title) + " {\r\n");
 		buffer.push("rankdir=" + config.rotation + "\r\n\r\n");
 		
-		if (config.cluster)
+		if (config.cluster) {
 			buffer.push(writeClusterCode(storyObj.tagObject));
-		else if (config.colorByTag) {
+		} else if (config.colorByTag) {
 			buffer.push(writeTagKey(storyObj,config));
 		}
 		
-		document.getElementById("nodeCount").innerHTML = storyObj.passages.length;
-		
+		//The main part of the graph is the passage graphing, including links.
 		for (var i = 0; i < storyObj.passages.length; ++i) {
-			buffer.push(context.passage.parse(storyObj.passages[i]));
+			buffer.push(passage(storyObj.passages[i]));
+			buffer.push("\r\n");
 		}
 		
 		//Push title.
 		buffer.push("\nlabelloc=\"t\"\n");
-		buffer.push("label=" + storyObj.title);
+		buffer.push("label=" + scrub(storyObj.title));
 		
 		buffer.push("\n}\r\n");
-		
-		document.getElementById("nodeCount").innerHTML = storyObj.passages.length;
-		document.getElementById("leafCount").innerHTML = storyObj.leaves;
-				document.getElementById("linkCount").innerHTML = storyObj.links;
-		if (config.ends) {
-			var looseEnds = storyObj.leaves - storyObj.tightEnds;
-			document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
-		} else {
-			document.getElementById("looseCount").innerHTML = "";
-		}
-		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
 		
 		return buffer.join('');
 	}
 
-	function scrub(title) {
-		if (title) {
-			// dangerously scrubbing non-ascii characters for graphviz bug
-			title = title.replace(/"/gm,"\\\"").replace(/[^\x00-\x7F]/g, "");
-			// add literal quotes for titles in all cases.
-			title = '"' + title + '"';
+	function getIdFromTarget(target) {
+		if (storyObj.targets.hasOwnProperty(target))
+			return storyObj.targets[target];
+		else
+			return scrub(target);
+	}	
+
+	function getLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l];
+			linkGraph.push(nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getIdFromTarget(target)));
 		}
-		return title;
+		return linkGraph;
+	}
+
+	function getNameOrPid(passage, returnName) {
+		//Sometimes used to get the real name (returnName), sometimes the pids.
+		var name;
+		if (config.showNodeNames || returnName) {
+			name = scrub(passage.name);
+		} else {
+			name = passage.pid ? passage.pid : scrub("Untitled Passage");
+		}
+		return name;
+	}
+
+	function passage(passage) {
+		//Graph a parsed passage.
+		var pid = passage.pid;
+		var styles = [];
+		
+		if (pid == storyObj.startNode) {
+			styles.push("shape=doublecircle");
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.push("shape=egg");
+		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
+			styles.push("shape=diamond");
+		}
+
+		var content = passage.content;
+		var firstTag = passage.firstTag;
+		
+		var scrubbedNameOrPid = getNameOrPid(passage);
+		var tag = passage.firstTag;
+		var result = [];
+		var hue = 0;
+
+		if (styles.length === 0 && passage.links.length === 0) {
+			//We are at a terminal passage that isn't already styled as the start or an end.
+			styles.push("style=\"filled,diagonals\"");
+		} else if (styles.length) {
+			styles.push("style=\"filled,bold\"");
+		}	else if (!config.colorBW) {
+			styles.push("style=filled");
+		}
+		
+		if (config.colorByNode) {
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
+			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
+		} else if (config.colorByTag && tag) {
+			var indx = storyObj.tags.indexOf(tag);
+			if (indx > -1)
+				hue = config.palette[indx%26]; //color alphabet colors
+			styles.push("fillcolor=\"" + hue + "\"");
+		}
+		
+		//Push the node, in case there are no links.
+		result.push(scrubbedNameOrPid);
+		styles.push("tooltip=" + getNameOrPid(passage, true));
+		
+		result.push(" [" + styles.join(' ') + "]");
+		result.push("\r\n", getLinks(passage, scrubbedNameOrPid).join("\r\n"), "\r\n");
+		
+		return result.join('');
+	}
+
+	function scrub(name) {
+		//Put names into a legal dot format.
+		if (name) {
+			// dangerously scrubbing non-ascii characters for graphviz bug
+			name = name.replace(/"/gm,"\\\"").replace(/[^\x00-\x7F]/g, "");
+			// add literal quotes for names in all cases.
+			name = '"' + name + '"';
+		}
+		return name;
 	}
 
 	function writeClusterCode(tagObject) {
@@ -203,12 +272,11 @@ context.passage = (function() {
 	return {
 		hasTag: hasTag,
 		getFirstTag: getFirstTag,
-		parse: parse,
-		parseName: parseName
+		parse: parse
 	};
 
-	function getFirstTag(passage) {
-		var tagArray = passage.tagArray.slice(0);
+	function getFirstTag(tags) {
+		var tagArray = tags.slice(0);
 		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
 			tagArray.splice(tagArray.indexOf(config.endTag), 1);
 		}
@@ -227,82 +295,26 @@ context.passage = (function() {
 			return false;
 	}
 
-	function parse(passage) {
-		var name = passage.scrubbedTitleOrPid;
-		var pid = passage.pid;
-		var styles = [];
-		
-		if (pid == storyObj.startNode) {
-			styles.push("shape=doublecircle");
-		} else if (config.ends && hasTag(passage, config.endTag)) {
-			styles.push("shape=egg");
-		} else if (config.checkpoints && hasTag(passage, config.checkpointTag)) {
-			styles.push("shape=diamond");
-		}
-		var content = passage.content;
-		var firstTag = passage.firstTag;
-		
-		var scrubbedTitleOrPid = passage.scrubbedTitleOrPid;
-		var tag = passage.firstTag;
-		var result = [];
-		var hue = 0;
-		var parsedLinks = parseLinks(content, scrubbedTitleOrPid);
-		storyObj.links += parsedLinks.length;
+	function parse(source, index) {
+		//Parse passage from twine1 or 2 source.
+		var passageObj = {};
+		var tagArray = (source.getAttribute("tags") ? source.getAttribute("tags").split(" ") : []);
 
-		if (parsedLinks.length === 0)
-			storyObj.leaves++;
-		
-		if (styles.length === 0 && parsedLinks.length === 0) {
-			//We are at a terminal passage that isn't already styled as the start or an end.
-			styles.push("style=\"filled,diagonals\"");
-		} else if (styles.length) {
-			styles.push("style=\"filled,bold\"");
-		}	else if (!config.colorBW) {
-			styles.push("style=filled");
-		}
-		
-		if (config.colorByNode) {
-			hue = Math.round(100 * (Math.min(1.75, content.length / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
-			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
-		} else if (config.colorByTag && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
-			styles.push("fillcolor=\"" + hue + "\"");
-		}
-		
-		//Push the node, in case there are no links.
-		result.push(scrubbedTitleOrPid);
-		styles.push("tooltip=" + passage.scrubbedTitle);
-		
-		result.push(" [" + styles.join(' ') + "]");
-		result.push("\r\n", parsedLinks.join("\r\n"), "\r\n");
-		
-		return result.join('');
-	}
-			
-	function parseName(passage,returnName) {
-		//Sometimes used to get the real name (returnName), sometimes the pids.
-		var name;
-		if (config.showNodeNames || returnName) {
-			name = context.graph.scrub(passage.name);
-		} else {
-			name = passage.pid ? passage.pid : context.graph.scrub("Untitled Passage");
-		}
-		return name;
+		passageObj.content = source.innerText;
+		passageObj.links = parseLinks(source.innerText);
+		passageObj.textLength = source.innerText.length;
+		//Make it like Twine2.
+		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
+		passageObj.tagArray = tagArray;
+		passageObj.firstTag = getFirstTag(tagArray);
+		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
+
+		return passageObj;
 	}
 
-	//Private
-	function getIdFromTarget(target) {
-		var scrubbedTarget = context.graph.scrub(target);
-		if (storyObj.targets.hasOwnProperty(scrubbedTarget))
-			return storyObj.targets[scrubbedTarget];
-		else
-			return scrubbedTarget;
-	}	
-	
+	//Private	
 	function parseLink(target) {
-		//Parsing code for the various formats adapted from Snowman.
+		//Parsing code for the various formats, adapted from Snowman.
 		
 		// display|target format
 		
@@ -329,8 +341,8 @@ context.passage = (function() {
 		return target;
 	}
 
-	function parseLinks(content, titleOrPid) {
-		var linkGraph = [];
+	function parseLinks(content) {
+		var linkList = [];
 		var re = /\[\[(.*?)\]\]/g;
 		var targetArray;
 		if (content) {
@@ -345,11 +357,11 @@ context.passage = (function() {
 				if (/^\w+:\/\/\/?\w/i.test(target)) {
 					// do nothing with external links
 				}	else {
-					linkGraph.push(titleOrPid + " -> " + (config.showNodeNames ? context.graph.scrub(target) : getIdFromTarget(target)));
+					linkList.push(target);
 				}
 			}
 		}
-		return linkGraph;
+		return linkList;
 	}
 
 })();
@@ -407,7 +419,7 @@ context.story = (function () {
 				title = storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0].innerText;
 				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0]);
 			}
-			storyObj.title = context.graph.scrub(title);
+			storyObj.title = title;
 			
 			var specialPassageList = ["StoryAuthor","StorySubtitle","StoryMenu","StorySettings","StoryIncludes"];
 			specialPassageList.forEach(function(specialPassage) {
@@ -435,7 +447,7 @@ context.story = (function () {
 			
 			source = storyTwine1.querySelectorAll("div[tiddler]");
 		} else if (storyData) {
-			storyObj.title = context.graph.scrub(storyData[0].getAttribute("name"));
+			storyObj.title = storyData[0].getAttribute("name");
 			storyObj.startNode = storyData[0].getAttribute("startnode");
 			source = document.querySelectorAll("tw-passagedata");
 		} else {
@@ -444,54 +456,72 @@ context.story = (function () {
 			source = document.querySelectorAll("tw-passagedata");
 		}
 
-		for (p = 0; p < source.length; p++) {
-			if (storyTwine1 && source[p].getAttribute("tiddler") == "Start") {
-				//Couldn't do this until source was cleaned.
-				storyObj.startNode = p;
-			}
-			storyObj.passages[p] = {};
-					storyObj.passages[p].content = source[p].innerText;
-			storyObj.passages[p].textLength = storyObj.passages[p].content.length;
-			//Make it like Twine2.
-			storyObj.passages[p].pid = source[p].getAttribute("pid") ? source[p].getAttribute("pid") : p;
-			storyObj.passages[p].tagArray = (source[p].getAttribute("tags") ? source[p].getAttribute("tags").split(" ") : []);
-			storyObj.passages[p].name = source[p].getAttribute("name") ? source[p].getAttribute("name") :
-				(source[p].getAttribute("tiddler") ? source[p].getAttribute("tiddler") : "Untitled Passage");
-			storyObj.passages[p].scrubbedTitle = context.passage.parseName(storyObj.passages[p],true);
-			storyObj.passages[p].scrubbedTitleOrPid = context.passage.parseName(storyObj.passages[p]);
-		}
-		
+		storyObj.passages = parsePassages(source);
 		storyObj.leaves = 0;
 		storyObj.links = 0;
 		storyObj.tightEnds = 0;
-		
+
 		storyObj.tagObject = {};
 		storyObj.tags = [];
 		storyObj.targets = {};
 		for (p = 0; p < storyObj.passages.length; p++) {
+
+			if (storyTwine1 && storyObj.passages[p].name == "Start") {
+				//Couldn't do this until source was cleaned.
+				storyObj.startNode = p;
+			}
+
 			if (config.ends) {
 				if (context.passage.hasTag(storyObj.passages[p],config.endTag))
 					storyObj.tightEnds++;
 			}
 			
 			if (storyObj.passages[p].pid == storyObj.startNode)
-				storyObj.startNodeName = storyObj.passages[p].scrubbedTitleOrPid;
+				storyObj.startNodeName = storyObj.passages[p].scrubbedNameOrPid;
 			
-			storyObj.passages[p].firstTag = context.passage.getFirstTag(storyObj.passages[p]);
 			if (storyObj.passages[p].firstTag) {
 				if (!storyObj.tagObject.hasOwnProperty(storyObj.passages[p].firstTag)) {
 					storyObj.tagObject[storyObj.passages[p].firstTag] = [];
 					storyObj.tags.push(storyObj.passages[p].firstTag);
 				}
-				storyObj.tagObject[storyObj.passages[p].firstTag].push(storyObj.passages[p].scrubbedTitleOrPid);
+				storyObj.tagObject[storyObj.passages[p].firstTag].push(storyObj.passages[p].scrubbedNameOrPid);
 			}
-			
-			storyObj.targets[storyObj.passages[p].scrubbedTitle] = storyObj.passages[p].pid;
+
+			//Create targets key for lookups.
+			storyObj.targets[storyObj.passages[p].name] = storyObj.passages[p].pid;
+
+			storyObj.links += storyObj.passages[p].links.length;
+			if (storyObj.passages[p].links.length === 0)
+				storyObj.leaves++;
+
 		};
 		
 		storyObj.maxLength = storyObj.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
 		storyObj.avLength = storyObj.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / storyObj.passages.length;
-		
+
+		writeStats();
+	}
+
+	//Private
+	function parsePassages(source) {
+		var passages = [];
+		for (var p = 0; p < source.length; p++) {
+			passages[p] = context.passage.parse(source[p],p);
+		}
+		return passages;
+	}
+
+	function writeStats() {
+		document.getElementById("nodeCount").innerHTML = storyObj.passages.length;
+		document.getElementById("leafCount").innerHTML = storyObj.leaves;
+		document.getElementById("linkCount").innerHTML = storyObj.links;
+		if (config.ends) {
+			var looseEnds = storyObj.leaves - storyObj.tightEnds;
+			document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
+		} else {
+			document.getElementById("looseCount").innerHTML = "";
+		}
+		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
 	}
 
 })();
