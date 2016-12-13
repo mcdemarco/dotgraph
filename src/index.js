@@ -84,24 +84,19 @@ context.graph = (function() {
  	}
 
 	//Private
-	function dot(reparse) {
-		//Optionally (re)parse the story and return the dot graph source.
+	function dot() {
+		//(Re)parse the story and return the dot graph source.
 		var buffer = [];
 
 		//A change in the settings is what normally triggers regraphing.
 		context.settings.parse();
-
-		//Only reparse if necessary.
-		//(Needs checks on certain settings changes to work as is, 
-		//   or to separate parsing from presentation.)
-		if (storyObj.passages.length == 0 || reparse)
-			context.story.parse();
+		context.story.parse();
 
 		buffer.push("digraph " + scrub(storyObj.title) + " {\r\n");
 		buffer.push("rankdir=" + config.rotation + "\r\n\r\n");
 		
 		if (config.cluster) {
-			buffer.push(writeClusterCode(storyObj.tagObject));
+			buffer.push(writeClusters(storyObj.tagObject));
 		} else if (config.colorByTag) {
 			buffer.push(writeTagKey(storyObj,config));
 		}
@@ -121,7 +116,7 @@ context.graph = (function() {
 		return buffer.join('');
 	}
 
-	function getIdFromTarget(target) {
+	function getPidFromTarget(target) {
 		if (storyObj.targets.hasOwnProperty(target))
 			return storyObj.targets[target];
 		else
@@ -133,7 +128,7 @@ context.graph = (function() {
 
 		for (var l = 0; l < passage.links.length; l++) {
 			var target = passage.links[l];
-			linkGraph.push(nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getIdFromTarget(target)));
+			linkGraph.push(nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getPidFromTarget(target)));
 		}
 		return linkGraph;
 	}
@@ -145,6 +140,17 @@ context.graph = (function() {
 			name = scrub(passage.name);
 		} else {
 			name = passage.pid ? passage.pid : scrub("Untitled Passage");
+		}
+		return name;
+	}
+
+	function getNameOrPidFromTarget(target) {
+		//Sometimes used to get the real name (returnName), sometimes the pids.
+		var name;
+		if (config.showNodeNames) {
+			name = scrub(target);
+		} else {
+			name = getPidFromTarget(target);
 		}
 		return name;
 	}
@@ -210,7 +216,7 @@ context.graph = (function() {
 		return name;
 	}
 
-	function writeClusterCode(tagObject) {
+	function writeClusters(tagObject) {
 		var clusters = ""; //For repeated presses of the button.
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
@@ -218,7 +224,8 @@ context.graph = (function() {
 				clusters += "subgraph cluster_" + clusterIndex + " {\r\n";
 				clusters += "label=" + scrub(tag) + "\r\n";
 				clusters += "style=\"rounded, filled\" fillcolor=\"ivory\"\r\n";
-				clusters += tagObject[tag].join(" \r\n") + "}\r\n\r\n";
+				clusters += tagObject[tag].map(getNameOrPidFromTarget).join(" \r\n");
+				clusters += "}\r\n\r\n";
 				clusterIndex++;
 			}
 		}
@@ -271,22 +278,8 @@ context.passage = (function() {
 
 	return {
 		hasTag: hasTag,
-		getFirstTag: getFirstTag,
 		parse: parse
 	};
-
-	function getFirstTag(tags) {
-		var tagArray = tags.slice(0);
-		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
-			tagArray.splice(tagArray.indexOf(config.endTag), 1);
-		}
-		if (config.checkpoints && tagArray.indexOf(config.checkpointTag) > -1)
-			tagArray.splice(tagArray.indexOf(config.checkpointTag), 1);
-		if (tagArray.length)
-			return tagArray[0];
-		else
-			return "";
-	}
 
 	function hasTag(passage, tag) {
 		if (passage.tagArray.indexOf(tag) > -1)
@@ -313,6 +306,19 @@ context.passage = (function() {
 	}
 
 	//Private	
+	function getFirstTag(tags) {
+		var tagArray = tags.slice(0);
+		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
+			tagArray.splice(tagArray.indexOf(config.endTag), 1);
+		}
+		if (config.checkpoints && tagArray.indexOf(config.checkpointTag) > -1)
+			tagArray.splice(tagArray.indexOf(config.checkpointTag), 1);
+		if (tagArray.length)
+			return tagArray[0];
+		else
+			return "";
+	}
+
 	function parseLink(target) {
 		//Parsing code for the various formats, adapted from Snowman.
 		
@@ -484,7 +490,7 @@ context.story = (function () {
 					storyObj.tagObject[storyObj.passages[p].firstTag] = [];
 					storyObj.tags.push(storyObj.passages[p].firstTag);
 				}
-				storyObj.tagObject[storyObj.passages[p].firstTag].push(storyObj.passages[p].scrubbedNameOrPid);
+				storyObj.tagObject[storyObj.passages[p].firstTag].push(storyObj.passages[p].name);
 			}
 
 			//Create targets key for lookups.
