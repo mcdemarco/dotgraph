@@ -92,28 +92,27 @@ context.graph = (function() {
 		context.settings.parse();
 		context.story.parse();
 
-		buffer.push("digraph " + scrub(storyObj.title) + " {\r\n");
-		buffer.push("rankdir=" + config.rotation + "\r\n\r\n");
+		buffer.push("digraph " + scrub(storyObj.title) + " {");
+		buffer.push("rankdir=" + config.rotation + "\r\n");
 		
 		if (config.cluster) {
-			buffer.push(writeClusters(storyObj.tagObject));
+			buffer = buffer.concat(writeClusters(storyObj.tagObject));
 		} else if (config.colorByTag) {
-			buffer.push(writeTagKey(storyObj,config));
+			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
 		//The main part of the graph is the passage graphing, including links.
 		for (var i = 0; i < storyObj.passages.length; ++i) {
-			buffer.push(passage(storyObj.passages[i]));
-			buffer.push("\r\n");
+			buffer = buffer.concat(passage(storyObj.passages[i]));
 		}
 		
 		//Push title.
 		buffer.push("\nlabelloc=\"t\"\n");
 		buffer.push("label=" + scrub(storyObj.title));
 		
-		buffer.push("\n}\r\n");
+		buffer.push("\n}");
 		
-		return buffer.join('');
+		return buffer.join("\r\n");
 	}
 
 	function getPidFromTarget(target) {
@@ -133,10 +132,13 @@ context.graph = (function() {
 		return linkGraph;
 	}
 
-	function getNameOrPid(passage, returnName) {
-		//Sometimes used to get the real name (returnName), sometimes the pids.
+	function getNameOrPid(passage, reversed) {
+		//Used to get the node label in the style requested by the settings, 
+		//except in tooltips, where we give the alternate label.
 		var name;
-		if (config.showNodeNames || returnName) {
+		var returnAsName = (reversed ? !config.showNodeNames : config.showNodeNames);
+
+		if (returnAsName) {
 			name = scrub(passage.name);
 		} else {
 			name = passage.pid ? passage.pid : scrub("Untitled Passage");
@@ -156,10 +158,30 @@ context.graph = (function() {
 	}
 
 	function passage(passage) {
-		//Graph a parsed passage.
-		var pid = passage.pid;
-		var styles = [];
+		//Graph a single parsed passage, including links.
+		var result = [];
+		var scrubbedNameOrPid = getNameOrPid(passage);
+		var styles = stylePassage(passage);
+		var links = getLinks(passage, scrubbedNameOrPid);
 		
+		//Push the node itself with styles (because it's always styled in some way).
+		result.push("\r\n" + scrubbedNameOrPid + " [" + styles.join(' ') + "]");
+
+		//Push the link list.
+		result = result.concat(links);
+		
+		return result;
+	}
+
+	function stylePassage(passage) {
+		var styles = [];
+
+		var hue = 0;
+		var pid = passage.pid;
+		var content = passage.content;
+		var tag = passage.firstTag;
+
+		//Start with any special shape for the passage.
 		if (pid == storyObj.startNode) {
 			styles.push("shape=doublecircle");
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
@@ -168,14 +190,7 @@ context.graph = (function() {
 			styles.push("shape=diamond");
 		}
 
-		var content = passage.content;
-		var firstTag = passage.firstTag;
-		
-		var scrubbedNameOrPid = getNameOrPid(passage);
-		var tag = passage.firstTag;
-		var result = [];
-		var hue = 0;
-
+		//Add fill and bold styles.
 		if (styles.length === 0 && passage.links.length === 0) {
 			//We are at a terminal passage that isn't already styled as the start or an end.
 			styles.push("style=\"filled,diagonals\"");
@@ -185,6 +200,7 @@ context.graph = (function() {
 			styles.push("style=filled");
 		}
 		
+		//Calculate color.
 		if (config.colorByNode) {
 			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
@@ -195,14 +211,9 @@ context.graph = (function() {
 			styles.push("fillcolor=\"" + hue + "\"");
 		}
 		
-		//Push the node, in case there are no links.
-		result.push(scrubbedNameOrPid);
+		//Add a tooltip.
 		styles.push("tooltip=" + getNameOrPid(passage, true));
-		
-		result.push(" [" + styles.join(' ') + "]");
-		result.push("\r\n", getLinks(passage, scrubbedNameOrPid).join("\r\n"), "\r\n");
-		
-		return result.join('');
+		return styles;
 	}
 
 	function scrub(name) {
@@ -217,15 +228,15 @@ context.graph = (function() {
 	}
 
 	function writeClusters(tagObject) {
-		var clusters = ""; //For repeated presses of the button.
+		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
 			if (tagObject.hasOwnProperty(tag)) {
-				clusters += "subgraph cluster_" + clusterIndex + " {\r\n";
-				clusters += "label=" + scrub(tag) + "\r\n";
-				clusters += "style=\"rounded, filled\" fillcolor=\"ivory\"\r\n";
-				clusters += tagObject[tag].map(getNameOrPidFromTarget).join(" \r\n");
-				clusters += "}\r\n\r\n";
+				clusters.push("subgraph cluster_" + clusterIndex + " {");
+				clusters.push("label=" + scrub(tag));
+				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
+				clusters.push(tagObject[tag].map(getNameOrPidFromTarget).join(" \r\n"));
+				clusters.push("}\r\n");
 				clusterIndex++;
 			}
 		}
@@ -233,18 +244,19 @@ context.graph = (function() {
 	}
 	
 	function writeTagKey(story,settings) {
-		var tagKey = "{rank=source\r\nstyle=\"rounded, filled\"\r\n";
+		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
 		var tagName;
 		for (var t=0; t<story.tags.length; t++) {
 			tagName = scrub(storyObj.tags[t]);
-			tagKey += tagName + " [shape=rect ";
-			tagKey += "style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]\r\n";
+			tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]");
 		}
-		tagKey += "}\r\n";
+		tagKey.push("}");
 		
 		var startName = (settings.showNodeNames ? story.startNodeName : story.startNode);
+
+		//Dot hackery: invisible graphing to keep things lined up.
 		for (t=0; t<story.tags.length; t++)
-			tagKey += scrub(story.tags[t]) + " -> " + startName + " [style=invis]\r\n";
+			tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
 		
 		return tagKey;
 	}
@@ -388,7 +400,7 @@ context.settings = (function () {
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
-		config.showNodeNames = document.getElementById("nodeCheckbox") ? document.getElementById("nodeCheckbox").checked : false;
+		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
 	}
 			
 	function scale() {
