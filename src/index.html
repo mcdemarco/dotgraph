@@ -20,7 +20,7 @@
 	</div>
 	<h2>Graph</h2>
 	<div style="font-size:smaller;width:45%; float:right;">
-		Notes:  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.  The cluster and color by tag options use the first tag on each passage.<br/>The start node is double-circled.  Optional detection of an "End" tag changes the shape of "End" passages to an egg.  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  Disconnected nodes have diagonals.  Stray or misplaced nodes tend to indicate duplicate passage names or other linking issues.<br/>The image format is SVG.
+		Notes:  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.  The cluster and color by tag options use the first tag on each passage.<br/>The start node is double-circled.  Optional detection of an "End" tag changes the shape of "End" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  Stray or misplaced nodes tend to indicate duplicate passage names or other linking issues.<br/>The image format is SVG.
 	</div>
 	<div>
 		<span id="stats">
@@ -35,13 +35,15 @@
 			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="none"/>&nbsp;<label for="colorCheckbox0">Black & white</label>
 			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="node" checked/>&nbsp;<label for="colorCheckbox1">Color by node length</label>
 			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag"/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/>
-			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" checked/>&nbsp;<label for="rotateCheckbox0">Top&rarr;bottom</label>
-			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR"/>&nbsp;<label for="rotateCheckbox1">left&rarr;right</label>
-			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT"/>&nbsp;<label for="rotateCheckbox2">bottom&rarr;top</label>
-			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL"/>&nbsp;<label for="rotateCheckbox3">right&rarr;left</label><br/>
+
+			<input type="checkbox" id="specialCheckbox" checked/>&nbsp;<label for="specialCheckbox">Omit special passages (StoryAuthor, StorySubtitle, etc.)</label><br/>
 			<input type="checkbox" id="checkpointsCheckbox" checked/>&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label>
 			<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label><br/>
 			<input type="checkbox" id="clusterCheckbox"/>&nbsp;<label for="clusterCheckbox">Cluster by tags</label><br/>
+			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" checked/>&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label>
+			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR"/>&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label>
+			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT"/>&nbsp;<label for="rotateCheckbox2" title="Bottom to top">&uarr;</label>
+			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL"/>&nbsp;<label for="rotateCheckbox3" title="Right to left">&larr;</label>
 			<input type="checkbox" id="scaleCheckbox" checked/>&nbsp;<label for="scaleCheckbox">Scale to fit page</label><br/>
 		</form>
 		<button type="button" id="saveSvgButton">Save Image</button><br/>

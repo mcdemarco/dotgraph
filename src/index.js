@@ -11,6 +11,7 @@ var dotGraph = {};
 								colorByTag: false,
 								ends: true,
 								endTag: "End",
+								omitSpecialPassages: true,
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
@@ -21,6 +22,13 @@ var dotGraph = {};
 													"#85660D", "#325A9B", "#B10DA1", "#A0A0A0", "#782AB6",
 													"#565656"]
 								};
+
+	var specialPassageList = ["StoryTitle", "StoryIncludes",
+														"StoryAuthor", "StorySubtitle", "StoryMenu", "StorySettings",
+														"StoryColophon",
+														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
+														"PassageDone", "PassageFooter", "PassageHeader", "PassageReady",
+														"MenuOptions", "MenuShare"];
 
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
@@ -45,9 +53,9 @@ context.graph = (function() {
 		saveSvg: saveSvg
 	};
 
-	function convert(reparse) {
+	function convert() {
 		//Get the dot graph source.
-		var output = dot(reparse);
+		var output = dot();
 		
 		//Write the dot graph text to the page.
 		var dotTextarea = document.getElementById("dotfile");
@@ -160,6 +168,10 @@ context.graph = (function() {
 	function passage(passage) {
 		//Graph a single parsed passage, including links.
 		var result = [];
+
+		if (config.omitSpecialPassages && passage.special)
+			return result;
+
 		var scrubbedNameOrPid = getNameOrPid(passage);
 		var styles = stylePassage(passage);
 		var links = getLinks(passage, scrubbedNameOrPid);
@@ -191,7 +203,7 @@ context.graph = (function() {
 		}
 
 		//Add fill and bold styles.
-		if (styles.length === 0 && passage.links.length === 0) {
+		if (styles.length === 0 && passage.links.length === 0  && config.ends) {
 			//We are at a terminal passage that isn't already styled as the start or an end.
 			styles.push("style=\"filled,diagonals\"");
 		} else if (styles.length) {
@@ -313,6 +325,7 @@ context.passage = (function() {
 		passageObj.tagArray = tagArray;
 		passageObj.firstTag = getFirstTag(tagArray);
 		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
+		passageObj.special = (specialPassageList.indexOf(passageObj.name) > -1);
 
 		return passageObj;
 	}
@@ -398,6 +411,7 @@ context.settings = (function () {
 		config.colorByNode = document.getElementById("colorCheckbox1") ? document.getElementById("colorCheckbox1").checked : false;
 		config.colorByTag = document.getElementById("colorCheckbox2") ? document.getElementById("colorCheckbox2").checked : false;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
+		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
@@ -429,50 +443,39 @@ context.story = (function () {
 		
 		//Detecting twine version here.
 		var storyTwine1 = window.document.getElementById("storeArea");
-		var storyData = window.document.getElementsByTagName("tw-storydata");
-		
+		var storyTwine2 = window.document.getElementsByTagName("tw-storydata")[0];
+
 		if (storyTwine1) {
 			var title = "Untitled Story";
 			if (storyTwine1.querySelectorAll('[tiddler="StoryTitle"]').length) {
 				title = storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0].innerText;
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0]);
 			}
 			storyObj.title = title;
-			
-			var specialPassageList = ["StoryAuthor","StorySubtitle","StoryMenu","StorySettings","StoryIncludes"];
+		} else if (storyTwine2) {
+			storyObj.title = storyTwine2.getAttribute("name") ? storyTwine2.getAttribute("name") : "Untitled";
+			storyObj.startNode = storyTwine2.getAttribute("startnode") ? storyTwine2.getAttribute("startnode") : 1;
+		} else {
+			//Not clear this can occur.
+			storyObj.title = 1;
+			storyObj.startNode = 1;
+		}
+
+		/*Clean up passages.
+		if (config.omitSpecialPassages) {
 			specialPassageList.forEach(function(specialPassage) {
-				if (storyTwine1.querySelectorAll('[tiddler="' + specialPassage + '"]').length) {
-					storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="' + specialPassage + '"]')[0]);
+				if (storyTwine1 && storyTwine1.querySelectorAll('div[tiddler="' + specialPassage + '"]').length) {
+					storyTwine1.removeChild(storyTwine1.querySelectorAll('div[tiddler="' + specialPassage + '"]')[0]);
+				} else if (storyTwine2 && storyTwine2.querySelectorAll('tw-passagedata[name="' + specialPassage + '"]').length) {
+					storyTwine2.removeChild(storyTwine2.querySelectorAll('tw-passagedata[name="' + specialPassage + '"]')[0]);
 				}
 			});
-			
-			//Remove more extraneous Twine 1.x passages.
-			if (storyTwine1.querySelectorAll('[tiddler="StoryAuthor"]').length) {
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryAuthor"]')[0]);
-			}
-			if (storyTwine1.querySelectorAll('[tiddler="StorySubtitle"]').length) {
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StorySubtitle"]')[0]);
-			}
-			if (storyTwine1.querySelectorAll('[tiddler="StoryMenu"]').length) {
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryMenu"]')[0]);
-			}
-			if (storyTwine1.querySelectorAll('[tiddler="StorySettings"]').length) {
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StorySettings"]')[0]);
-			}
-			if (storyTwine1.querySelectorAll('[tiddler="StoryIncludes"]').length) {
-				storyTwine1.removeChild(storyTwine1.querySelectorAll('[tiddler="StoryIncludes"]')[0]);
-			}
-			
-			source = storyTwine1.querySelectorAll("div[tiddler]");
-		} else if (storyData) {
-			storyObj.title = storyData[0].getAttribute("name");
-			storyObj.startNode = storyData[0].getAttribute("startnode");
-			source = document.querySelectorAll("tw-passagedata");
-		} else {
-			storyObj.title = "Untitled";
-			storyObj.startNode = 1;
-			source = document.querySelectorAll("tw-passagedata");
 		}
+		 */
+
+		if (storyTwine1)
+			source = storyTwine1.querySelectorAll("div[tiddler]");
+		else 
+			source = document.querySelectorAll("tw-passagedata");
 
 		storyObj.passages = parsePassages(source);
 		storyObj.leaves = 0;
