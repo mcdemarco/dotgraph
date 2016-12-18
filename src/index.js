@@ -12,6 +12,7 @@ var dotGraph = {};
 								ends: true,
 								endTag: "End",
 								omitSpecialPassages: true,
+								renumber: false,
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
@@ -33,7 +34,7 @@ var dotGraph = {};
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
 									startNodeName: "Start", 
-									leaves: 0, 
+									leaves: 0,
 									links: 0,
 									tightEnds: 0,
 									avLength: 1,
@@ -110,10 +111,9 @@ context.graph = (function() {
 		}
 		
 		//The main part of the graph is the passage graphing, including links.
-		for (var i = 0; i < storyObj.passages.length; ++i) {
-			buffer = buffer.concat(passage(storyObj.passages[i]));
-		}
-		
+		var graphedPassages = passages();
+		buffer = buffer.concat(graphedPassages);
+
 		//Push title.
 		buffer.push("\nlabelloc=\"t\"\n");
 		buffer.push("label=" + scrub(storyObj.title));
@@ -165,7 +165,35 @@ context.graph = (function() {
 		return name;
 	}
 
-	function passage(passage) {
+	function passages() {
+		//Graph passages.
+		var subbuffer = [];
+
+		if (config.renumber && !config.showNodeNames) {
+			//Renumbering is complicated.  Start at start.
+			var i;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				if (storyObj.passages[i].pid == storyObj.startNode)
+					subbuffer = subbuffer.concat(passage(storyObj.passages[i],1));
+			}
+			var renumberPid = 2;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				var psgi = storyObj.passages[i];
+				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special)) {
+					subbuffer = subbuffer.concat(passage(psgi,renumberPid));
+					renumberPid++;
+				}
+			}
+		} else {
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				subbuffer.push(passage(storyObj.passages[i]));
+			}
+		}
+
+		return subbuffer;
+	}
+
+	function passage(passage,label) {
 		//Graph a single parsed passage, including links.
 		var result = [];
 
@@ -173,7 +201,8 @@ context.graph = (function() {
 			return result;
 
 		var scrubbedNameOrPid = getNameOrPid(passage);
-		var styles = stylePassage(passage);
+		var styles = stylePassage(passage, label);
+
 		var links = getLinks(passage, scrubbedNameOrPid);
 		
 		//Push the node itself with styles (because it's always styled in some way).
@@ -181,11 +210,11 @@ context.graph = (function() {
 
 		//Push the link list.
 		result = result.concat(links);
-		
+
 		return result;
 	}
 
-	function stylePassage(passage) {
+	function stylePassage(passage, label) {
 		var styles = [];
 
 		var hue = 0;
@@ -222,6 +251,10 @@ context.graph = (function() {
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
 		}
+
+		//Rename the node if a label was passed in.
+		if (label)
+			styles.push("label=\"" + label + "\"");
 		
 		//Add a tooltip.
 		styles.push("tooltip=" + getNameOrPid(passage, true));
@@ -412,6 +445,7 @@ context.settings = (function () {
 		config.colorByTag = document.getElementById("colorCheckbox2") ? document.getElementById("colorCheckbox2").checked : false;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
+		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
