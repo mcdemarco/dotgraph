@@ -111,8 +111,7 @@ context.graph = (function() {
 		}
 		
 		//The main part of the graph is the passage graphing, including links.
-		var graphedPassages = passages();
-		buffer = buffer.concat(graphedPassages);
+		buffer = buffer.concat(passages());
 
 		//Push title.
 		buffer.push("\nlabelloc=\"t\"\n");
@@ -186,7 +185,7 @@ context.graph = (function() {
 			}
 		} else {
 			for (i = 0; i < storyObj.passages.length; ++i) {
-				subbuffer.push(passage(storyObj.passages[i]));
+				subbuffer = subbuffer.concat(passage(storyObj.passages[i]));
 			}
 		}
 
