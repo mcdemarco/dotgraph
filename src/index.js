@@ -9,6 +9,7 @@ var dotGraph = {};
 								colorBW: true,
 								colorByNode: true,
 								colorByTag: false,
+								display: true,
 								ends: true,
 								endTag: "End",
 								omitSpecialPassages: true,
@@ -129,12 +130,15 @@ context.graph = (function() {
 			return scrub(target);
 	}	
 
-	function getLinks(passage, nameOrPid) {
+	function graphLinks(passage, nameOrPid) {
 		var linkGraph = [];
 
 		for (var l = 0; l < passage.links.length; l++) {
-			var target = passage.links[l];
-			linkGraph.push(nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getPidFromTarget(target)));
+			var target = passage.links[l][0];
+			var linkForGraph = nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getPidFromTarget(target));
+			if (passage.links[l][1])
+				linkForGraph += " [style = dashed]";
+			linkGraph.push(linkForGraph);
 		}
 		return linkGraph;
 	}
@@ -202,7 +206,7 @@ context.graph = (function() {
 		var scrubbedNameOrPid = getNameOrPid(passage);
 		var styles = stylePassage(passage, label);
 
-		var links = getLinks(passage, scrubbedNameOrPid);
+		var links = graphLinks(passage, scrubbedNameOrPid);
 		
 		//Push the node itself with styles (because it's always styled in some way).
 		result.push("\r\n" + scrubbedNameOrPid + " [" + styles.join(' ') + "]");
@@ -376,7 +380,7 @@ context.passage = (function() {
 			return "";
 	}
 
-	function parseLink(target) {
+	function parseLink(target, type) {
 		//Parsing code for the various formats, adapted from Snowman.
 		
 		// display|target format
@@ -401,12 +405,13 @@ context.passage = (function() {
 				}
 			}
 		}
-		return target;
+		return [target,type];
 	}
 
 	function parseLinks(content) {
 		var linkList = [];
 		var re = /\[\[(.*?)\]\]/g;
+		var re2 = /\<\<display \"(.*?)\"\>\>/g;
 		var targetArray;
 		if (content) {
 			//Clean up the content a bit (snowman), then extract links.
@@ -416,11 +421,21 @@ context.passage = (function() {
 			content = content.replace(/^\/\/.*(\r\n?|\n)/g, '');
 			
 			while ((targetArray = re.exec(content)) !== null) {
-				var target = parseLink(targetArray[1]);
+				var target = parseLink(targetArray[1],0);
 				if (/^\w+:\/\/\/?\w/i.test(target)) {
 					// do nothing with external links
 				}	else {
 					linkList.push(target);
+				}
+			}
+			if (config.display) {
+				while ((targetArray = re2.exec(content)) !== null) {
+					var target2 = parseLink(targetArray[1],1);
+					if (/^\w+:\/\/\/?\w/i.test(target2)) {
+						// do nothing with external links
+					}	else {
+						linkList.push(target2);
+					}
 				}
 			}
 		}
@@ -442,6 +457,7 @@ context.settings = (function () {
 		config.colorBW = document.getElementById("colorCheckbox0") ? document.getElementById("colorCheckbox0").checked : false;
 		config.colorByNode = document.getElementById("colorCheckbox1") ? document.getElementById("colorCheckbox1").checked : false;
 		config.colorByTag = document.getElementById("colorCheckbox2") ? document.getElementById("colorCheckbox2").checked : false;
+		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
 		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
@@ -492,18 +508,6 @@ context.story = (function () {
 			storyObj.title = 1;
 			storyObj.startNode = 1;
 		}
-
-		/*Clean up passages.
-		if (config.omitSpecialPassages) {
-			specialPassageList.forEach(function(specialPassage) {
-				if (storyTwine1 && storyTwine1.querySelectorAll('div[tiddler="' + specialPassage + '"]').length) {
-					storyTwine1.removeChild(storyTwine1.querySelectorAll('div[tiddler="' + specialPassage + '"]')[0]);
-				} else if (storyTwine2 && storyTwine2.querySelectorAll('tw-passagedata[name="' + specialPassage + '"]').length) {
-					storyTwine2.removeChild(storyTwine2.querySelectorAll('tw-passagedata[name="' + specialPassage + '"]')[0]);
-				}
-			});
-		}
-		 */
 
 		if (storyTwine1)
 			source = storyTwine1.querySelectorAll("div[tiddler]");

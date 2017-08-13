@@ -14,9 +14,13 @@ DotGraph may fail to save the SVG in Safari; if it fails, try a different browse
 
 ## Versions
 
-### 1.1.6
+### 2.0.1
 
-Added support for Twine 1.x, and some refactoring.
+Optionally parse <<display>> links.
+
+### 2.0.0
+
+Refactored with support for Twine 1.x, offline use, omitting special passages, and renumbering nodes.
 
 ### 1.1.5
 
