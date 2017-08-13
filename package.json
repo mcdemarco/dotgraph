@@ -1,7 +1,7 @@
 {
   "name": "DotGraph",
-  "version": "1.1.6",
-  "description": "A proofing format for creating Graphviz graphs.",
+  "version": "2.0.1",
+  "description": "A proofing format to make a Graphviz graph of a story.",
   "author": "M. C. DeMarco",
   "license": "MIT",
   "repository": "https://bitbucket.org/mcdemarco/dotgraph",
