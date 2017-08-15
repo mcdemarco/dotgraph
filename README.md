@@ -8,11 +8,16 @@ To add DotGraph to Twine 1, create a new folder called `dotgraph` inside your ta
 
 ## Troubleshooting
 
-DotGraph may fail to draw the graph in some versions of Twine 2 due to issues with Chrome; in that case it will still give you the text of the dot source file, as well as some links to sites online that will render it for you.
+DotGraph may fail to draw the graph in some versions of Twine 2 due to issues with Chrome;
+in that case it will still give you the text of the dot source file, as well as some links to sites online that can render it for you.
 
 DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
 
 ## Versions
+
+### 2.0.2
+
+Optionally omit any passages with certain (user-specified) tags.
 
 ### 2.0.1
 
