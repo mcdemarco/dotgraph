@@ -13,6 +13,7 @@ var dotGraph = {};
 								ends: true,
 								endTag: "End",
 								omitSpecialPassages: true,
+								omitTags: [],
 								renumber: false,
 								rotation: "TB",
 								scale: true,
@@ -45,6 +46,12 @@ var dotGraph = {};
 									tagObject: [],
 									targets: {}
 								 };
+
+//graph
+//init
+//passage
+//settings
+//story
  
 context.graph = (function() {
 
@@ -182,14 +189,15 @@ context.graph = (function() {
 			var renumberPid = 2;
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				var psgi = storyObj.passages[i];
-				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special)) {
+				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
 					subbuffer = subbuffer.concat(passage(psgi,renumberPid));
 					renumberPid++;
 				}
 			}
 		} else {
 			for (i = 0; i < storyObj.passages.length; ++i) {
-				subbuffer = subbuffer.concat(passage(storyObj.passages[i]));
+				if (!storyObj.passages[i].omit)
+					subbuffer = subbuffer.concat(passage(storyObj.passages[i]));
 			}
 		}
 
@@ -200,7 +208,7 @@ context.graph = (function() {
 		//Graph a single parsed passage, including links.
 		var result = [];
 
-		if (config.omitSpecialPassages && passage.special)
+		if ((config.omitSpecialPassages && passage.special) || passage.omit)
 			return result;
 
 		var scrubbedNameOrPid = getNameOrPid(passage);
@@ -279,7 +287,7 @@ context.graph = (function() {
 		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag)) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag)) {
 				clusters.push("subgraph cluster_" + clusterIndex + " {");
 				clusters.push("label=" + scrub(tag));
 				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
@@ -295,17 +303,20 @@ context.graph = (function() {
 		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
 		var tagName;
 		for (var t=0; t<story.tags.length; t++) {
-			tagName = scrub(storyObj.tags[t]);
-			tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]");
+			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
+				tagName = scrub(storyObj.tags[t]);
+				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]");
+			}
 		}
 		tagKey.push("}");
 		
 		var startName = (settings.showNodeNames ? story.startNodeName : story.startNode);
 
 		//Dot hackery: invisible graphing to keep things lined up.
-		for (t=0; t<story.tags.length; t++)
-			tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
-		
+		for (t=0; t<story.tags.length; t++) {
+			if (!context.settings.isOmittedTag(story.tags[t]))
+				tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
+		}
 		return tagKey;
 	}
 	
@@ -326,6 +337,7 @@ context.init = (function() {
 	//Private.
 	function activateForm() {
 		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
+		document.getElementById("omitTags").addEventListener('change', context.graph.convert, false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
@@ -362,6 +374,7 @@ context.passage = (function() {
 		passageObj.firstTag = getFirstTag(tagArray);
 		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
 		passageObj.special = (specialPassageList.indexOf(passageObj.name) > -1);
+		passageObj.omit = hasOmittedTag(passageObj);
 
 		return passageObj;
 	}
@@ -378,6 +391,18 @@ context.passage = (function() {
 			return tagArray[0];
 		else
 			return "";
+	}
+
+	function hasOmittedTag(passage) {
+		if (config.omitTags.length == 0) 
+			return false;
+		else {
+			for (var t=0; t<config.omitTags.length; t++) {
+				if (hasTag(passage,config.omitTags[t]))
+					return true;
+			}
+			return false;
+		}
 	}
 
 	function parseLink(target, type) {
@@ -447,9 +472,22 @@ context.passage = (function() {
 context.settings = (function () {
 
 	return {
+		isOmittedTag: isOmittedTag,
 		parse: parse,
 		scale: scale
 	};
+
+	function isOmittedTag(tag) {
+		if (config.omitTags.length == 0) 
+			return false;
+		else {
+			for (var t=0; t<config.omitTags.length; t++) {
+				if (config.omitTags[t] == tag)
+					return true;
+			}
+			return false;
+		}
+	}
 
 	function parse() {
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
@@ -464,6 +502,7 @@ context.settings = (function () {
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
+		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 	}
 			
 	function scale() {
@@ -472,6 +511,19 @@ context.settings = (function () {
 			svgElt.setAttribute("width","100%");
 			svgElt.removeAttribute("height");
 		}
+	}
+
+	function splitAndTrim(tagList) {
+		var tagArray = tagList.trim().split(",");
+		var tagArrayTrimmed = [];
+		for (var i = 0; i<tagArray.length; i++) {
+			var tagTrimmed = tagArray[i].trim(); 
+			if (tagTrimmed != "")
+				tagArrayTrimmed.push(tagTrimmed);
+		}
+
+		document.getElementById("omitTagsFakeRadioButton").checked = (tagArrayTrimmed.length > 0);		
+		return tagArrayTrimmed;
 	}
 
 })();
@@ -571,14 +623,22 @@ context.story = (function () {
 
 	function writeStats() {
 		document.getElementById("nodeCount").innerHTML = storyObj.passages.length;
+		if (config.omitSpecialPassages || config.omitTags.length > 0) {
+			var omittedCount = storyObj.passages.reduce(function(count, item) {
+				return count + ((( item.special && config.omitSpecialPassages ) || item.omit ) ? 1 : 0);
+			}, 0);
+			document.getElementById("omitCount").innerHTML = " (" + (storyObj.passages.length - omittedCount) + " included, " + omittedCount + " omitted)";	
+		} 
+
 		document.getElementById("leafCount").innerHTML = storyObj.leaves;
-		document.getElementById("linkCount").innerHTML = storyObj.links;
 		if (config.ends) {
 			var looseEnds = storyObj.leaves - storyObj.tightEnds;
 			document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
 		} else {
 			document.getElementById("looseCount").innerHTML = "";
 		}
+
+		document.getElementById("linkCount").innerHTML = storyObj.links;
 		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
 	}
 
