@@ -636,7 +636,7 @@ context.story = (function () {
 			var omittedCount = storyObj.passages.reduce(function(count, item) {
 				return count + ((( item.special && config.omitSpecialPassages ) || item.omit ) ? 1 : 0);
 			}, 0);
-			document.getElementById("omitCount").innerHTML = " (" + (storyObj.passages.length - omittedCount) + " included, " + omittedCount + " omitted, " + storyObj.unreachable.length + " " + storyObj.unreachable.toString() + " unreachable)";	
+			document.getElementById("omitCount").innerHTML = " (" + (storyObj.passages.length - omittedCount) + " included, " + omittedCount + " omitted, " + storyObj.unreachable.length + " unreachable)";	
 		} 
 
 		document.getElementById("leafCount").innerHTML = storyObj.leaves;
