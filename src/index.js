@@ -1,4 +1,5 @@
 var filesaver = require("filesaver.js-npm");
+var _ = require("underscore");
 var dotGraph = {};
 
 (function(context) { 
@@ -42,6 +43,7 @@ var dotGraph = {};
 									avLength: 1,
 									maxLength: 1,
 									passages: [],
+									reachable: [],
 									tags: [],
 									tagObject: [],
 									targets: {}
@@ -234,7 +236,7 @@ context.graph = (function() {
 		var tag = passage.firstTag;
 
 		//Start with any special shape for the passage.
-		if (pid == storyObj.startNode) {
+		if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.push("shape=doublecircle");
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
 			styles.push("shape=egg");
@@ -574,6 +576,8 @@ context.story = (function () {
 		storyObj.tagObject = {};
 		storyObj.tags = [];
 		storyObj.targets = {};
+		storyObj.reachable = specialPassageList;
+
 		for (p = 0; p < storyObj.passages.length; p++) {
 
 			if (storyTwine1 && storyObj.passages[p].name == "Start") {
@@ -586,8 +590,10 @@ context.story = (function () {
 					storyObj.tightEnds++;
 			}
 			
-			if (storyObj.passages[p].pid == storyObj.startNode)
+			if (storyObj.passages[p].pid == storyObj.startNode) {
 				storyObj.startNodeName = storyObj.passages[p].scrubbedNameOrPid;
+				storyObj.reachable.push(storyObj.passages[p].name);
+			}
 			
 			if (storyObj.passages[p].firstTag) {
 				if (!storyObj.tagObject.hasOwnProperty(storyObj.passages[p].firstTag)) {
@@ -601,11 +607,14 @@ context.story = (function () {
 			storyObj.targets[storyObj.passages[p].name] = storyObj.passages[p].pid;
 
 			storyObj.links += storyObj.passages[p].links.length;
+			storyObj.reachable = storyObj.reachable.concat(_.map(storyObj.passages[p].links,_.first));
 			if (storyObj.passages[p].links.length === 0)
 				storyObj.leaves++;
 
 		};
-		
+
+		storyObj.reachable = _.uniq(storyObj.reachable); 
+		storyObj.unreachable = _.difference(_.pluck(storyObj.passages,"name"),storyObj.reachable);
 		storyObj.maxLength = storyObj.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
 		storyObj.avLength = storyObj.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / storyObj.passages.length;
 
@@ -627,13 +636,13 @@ context.story = (function () {
 			var omittedCount = storyObj.passages.reduce(function(count, item) {
 				return count + ((( item.special && config.omitSpecialPassages ) || item.omit ) ? 1 : 0);
 			}, 0);
-			document.getElementById("omitCount").innerHTML = " (" + (storyObj.passages.length - omittedCount) + " included, " + omittedCount + " omitted)";	
+			document.getElementById("omitCount").innerHTML = " (" + (storyObj.passages.length - omittedCount) + " included, " + omittedCount + " omitted, " + storyObj.unreachable.length + " " + storyObj.unreachable.toString() + " unreachable)";	
 		} 
 
 		document.getElementById("leafCount").innerHTML = storyObj.leaves;
 		if (config.ends) {
 			var looseEnds = storyObj.leaves - storyObj.tightEnds;
-			document.getElementById("looseCount").innerHTML = " (including " + looseEnds + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
+			document.getElementById("looseCount").innerHTML = " (including " + (looseEnds > 0 ? looseEnds : 0) + " loose end" + (looseEnds != 1 ? "s" : "") + ")";
 		} else {
 			document.getElementById("looseCount").innerHTML = "";
 		}

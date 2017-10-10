@@ -15,6 +15,10 @@ DotGraph may fail to save the SVG in Safari; if it fails, try a different browse
 
 ## Versions
 
+### 2.0.3
+
+Counts and marks unreachable passages.
+
 ### 2.0.2
 
 Optionally omit any passages with certain (user-specified) tags.
