@@ -312,7 +312,7 @@ context.graph = (function() {
 		}
 		tagKey.push("}");
 		
-		var startName = (settings.showNodeNames ? story.startNodeName : story.startNode);
+		var startName = (settings.showNodeNames ? scrub(story.startNodeName) : story.startNode);
 
 		//Dot hackery: invisible graphing to keep things lined up.
 		for (t=0; t<story.tags.length; t++) {
@@ -591,7 +591,7 @@ context.story = (function () {
 			}
 			
 			if (storyObj.passages[p].pid == storyObj.startNode) {
-				storyObj.startNodeName = storyObj.passages[p].scrubbedNameOrPid;
+				storyObj.startNodeName = storyObj.passages[p].name;
 				storyObj.reachable.push(storyObj.passages[p].name);
 			}
 			
