@@ -22,10 +22,10 @@
 	</div>
 	<h2>Graph</h2>
 	<div id="notes">
-		<b>Notes:</b> When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The start node is double-circled, as are any unreachable nodes.  The cluster and color by tag options use the first tag on each passage; the omit by tag(s) option checks all tags.  Optional detection of an "End" tag changes the shape of "End" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
+		<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "End" tag changes the shape of "End" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.    The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
 	</div>
 	<div>
-		<span id="stats">
+		<span id="stats" title="Twine">
 			<span id="nodeCount">0</span>&nbsp;nodes<span id="omitCount"></span>,
 			<span id="leafCount">0</span>&nbsp;leaves<span id="looseCount"></span>,
 			<span id="linkCount">0</span>&nbsp;links, and
@@ -42,7 +42,8 @@
 			<input type="checkbox" id="specialCheckbox" checked/>&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryAuthor,&nbsp;StorySubtitle,&nbsp;etc.)<br/>
 			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value=""/><br/>
 			<input type="checkbox" id="checkpointsCheckbox" checked/>&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label>
-			<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label><br/>
+			<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label>
+			<input type="checkbox" id="lastTagCheckbox"/>&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/>
 			<input type="checkbox" id="clusterCheckbox"/>&nbsp;<label for="clusterCheckbox">Cluster by tags</label><br/>
 			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" checked/>&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label>
 			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR"/>&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label>
