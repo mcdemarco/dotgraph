@@ -15,6 +15,10 @@ DotGraph may fail to save the SVG in Safari; if it fails, try a different browse
 
 ## Versions
 
+### 2.0.5
+
+Add option to use last tag for tag colors/clusters, plus fix a start node issue.
+
 ### 2.0.4
 
 Minor fix to tag display.

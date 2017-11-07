@@ -13,6 +13,7 @@ var dotGraph = {};
 								display: true,
 								ends: true,
 								endTag: "End",
+								lastTag: false,
 								omitSpecialPassages: true,
 								omitTags: [],
 								renumber: false,
@@ -46,7 +47,8 @@ var dotGraph = {};
 									reachable: [],
 									tags: [],
 									tagObject: [],
-									targets: {}
+									targets: {},
+									twineVersion: 0
 								 };
 
 //graph
@@ -233,7 +235,7 @@ context.graph = (function() {
 		var hue = 0;
 		var pid = passage.pid;
 		var content = passage.content;
-		var tag = passage.firstTag;
+		var tag = passage.theTag;
 
 		//Start with any special shape for the passage.
 		if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
@@ -365,7 +367,7 @@ context.passage = (function() {
 	function parse(source, index) {
 		//Parse passage from twine1 or 2 source.
 		var passageObj = {};
-		var tagArray = (source.getAttribute("tags") ? source.getAttribute("tags").split(" ") : []);
+		var tagArray = (source.getAttribute("tags") ? source.getAttribute("tags").trim().split(" ") : []);
 
 		passageObj.content = source.innerText;
 		passageObj.links = parseLinks(source.innerText);
@@ -373,7 +375,7 @@ context.passage = (function() {
 		//Make it like Twine2.
 		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
 		passageObj.tagArray = tagArray;
-		passageObj.firstTag = getFirstTag(tagArray);
+		passageObj.theTag = getTheTag(tagArray);
 		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
 		passageObj.special = (specialPassageList.indexOf(passageObj.name) > -1);
 		passageObj.omit = hasOmittedTag(passageObj);
@@ -382,14 +384,16 @@ context.passage = (function() {
 	}
 
 	//Private	
-	function getFirstTag(tags) {
+	function getTheTag(tags) {
 		var tagArray = tags.slice(0);
 		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
 			tagArray.splice(tagArray.indexOf(config.endTag), 1);
 		}
 		if (config.checkpoints && tagArray.indexOf(config.checkpointTag) > -1)
 			tagArray.splice(tagArray.indexOf(config.checkpointTag), 1);
-		if (tagArray.length)
+		if (tagArray.length && config.lastTag) 
+			return tagArray[tagArray.length - 1];
+		else if (tagArray.length)
 			return tagArray[0];
 		else
 			return "";
@@ -505,6 +509,7 @@ context.settings = (function () {
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
+		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 	}
 			
 	function scale() {
@@ -549,12 +554,14 @@ context.story = (function () {
 		var storyTwine2 = window.document.getElementsByTagName("tw-storydata")[0];
 
 		if (storyTwine1) {
+			storyObj.twineVersion = 1;
 			var title = "Untitled Story";
 			if (storyTwine1.querySelectorAll('[tiddler="StoryTitle"]').length) {
 				title = storyTwine1.querySelectorAll('[tiddler="StoryTitle"]')[0].innerText;
 			}
 			storyObj.title = title;
 		} else if (storyTwine2) {
+			storyObj.twineVersion = 2;
 			storyObj.title = storyTwine2.getAttribute("name") ? storyTwine2.getAttribute("name") : "Untitled";
 			storyObj.startNode = storyTwine2.getAttribute("startnode") ? storyTwine2.getAttribute("startnode") : 1;
 		} else {
@@ -576,7 +583,7 @@ context.story = (function () {
 		storyObj.tagObject = {};
 		storyObj.tags = [];
 		storyObj.targets = {};
-		storyObj.reachable = specialPassageList;
+		storyObj.reachable = storyObj.reachable.concat(specialPassageList);
 
 		for (p = 0; p < storyObj.passages.length; p++) {
 
@@ -595,12 +602,12 @@ context.story = (function () {
 				storyObj.reachable.push(storyObj.passages[p].name);
 			}
 			
-			if (storyObj.passages[p].firstTag) {
-				if (!storyObj.tagObject.hasOwnProperty(storyObj.passages[p].firstTag)) {
-					storyObj.tagObject[storyObj.passages[p].firstTag] = [];
-					storyObj.tags.push(storyObj.passages[p].firstTag);
+			if (storyObj.passages[p].theTag) {
+				if (!storyObj.tagObject.hasOwnProperty(storyObj.passages[p].theTag)) {
+					storyObj.tagObject[storyObj.passages[p].theTag] = [];
+					storyObj.tags.push(storyObj.passages[p].theTag);
 				}
-				storyObj.tagObject[storyObj.passages[p].firstTag].push(storyObj.passages[p].name);
+				storyObj.tagObject[storyObj.passages[p].theTag].push(storyObj.passages[p].name);
 			}
 
 			//Create targets key for lookups.
@@ -649,6 +656,8 @@ context.story = (function () {
 
 		document.getElementById("linkCount").innerHTML = storyObj.links;
 		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
+
+		document.getElementById("stats").setAttribute("title","Twine " + storyObj.twineVersion);
 	}
 
 })();
