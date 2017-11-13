@@ -368,9 +368,11 @@ context.passage = (function() {
 		//Parse passage from twine1 or 2 source.
 		var passageObj = {};
 		var tagArray = (source.getAttribute("tags") ? source.getAttribute("tags").trim().split(" ") : []);
+		var links = parseLinks(source.innerText);
 
 		passageObj.content = source.innerText;
-		passageObj.links = parseLinks(source.innerText);
+		passageObj.links = links;
+		passageObj.leaf = (links.length === 0);
 		passageObj.textLength = source.innerText.length;
 		//Make it like Twine2.
 		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
@@ -587,35 +589,37 @@ context.story = (function () {
 
 		for (p = 0; p < storyObj.passages.length; p++) {
 
-			if (storyTwine1 && storyObj.passages[p].name == "Start") {
+			var stopo = storyObj.passages[p];
+
+			if (storyTwine1 && stopo.name == "Start") {
 				//Couldn't do this until source was cleaned.
 				storyObj.startNode = p;
 			}
 
 			if (config.ends) {
-				if (context.passage.hasTag(storyObj.passages[p],config.endTag))
+				if (context.passage.hasTag(stopo,config.endTag))
 					storyObj.tightEnds++;
 			}
 			
-			if (storyObj.passages[p].pid == storyObj.startNode) {
-				storyObj.startNodeName = storyObj.passages[p].name;
-				storyObj.reachable.push(storyObj.passages[p].name);
+			if (stopo.pid == storyObj.startNode) {
+				storyObj.startNodeName = stopo.name;
+				storyObj.reachable.push(stopo.name);
 			}
 			
-			if (storyObj.passages[p].theTag) {
-				if (!storyObj.tagObject.hasOwnProperty(storyObj.passages[p].theTag)) {
-					storyObj.tagObject[storyObj.passages[p].theTag] = [];
-					storyObj.tags.push(storyObj.passages[p].theTag);
+			if (stopo.theTag) {
+				if (!storyObj.tagObject.hasOwnProperty(stopo.theTag)) {
+					storyObj.tagObject[stopo.theTag] = [];
+					storyObj.tags.push(stopo.theTag);
 				}
-				storyObj.tagObject[storyObj.passages[p].theTag].push(storyObj.passages[p].name);
+				storyObj.tagObject[stopo.theTag].push(stopo.name);
 			}
 
 			//Create targets key for lookups.
-			storyObj.targets[storyObj.passages[p].name] = storyObj.passages[p].pid;
+			storyObj.targets[stopo.name] = stopo.pid;
 
-			storyObj.links += storyObj.passages[p].links.length;
-			storyObj.reachable = storyObj.reachable.concat(_.map(storyObj.passages[p].links,_.first));
-			if (storyObj.passages[p].links.length === 0)
+			storyObj.links += stopo.links.length;
+			storyObj.reachable = storyObj.reachable.concat(_.map(stopo.links,_.first));
+			if (stopo.leaf && !stopo.omit && !(stopo.special && config.omitSpecialPassages))
 				storyObj.leaves++;
 
 		};
