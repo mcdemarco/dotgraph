@@ -445,6 +445,7 @@ context.passage = (function() {
 		var linkList = [];
 		var re = /\[\[(.*?)\]\]/g;
 		var re2 = /\<\<display \"(.*?)\"\>\>/g;
+		var re3 = /\(display: \"(.*?)\"\)/g;
 		var targetArray;
 		if (content) {
 			//Clean up the content a bit (snowman), then extract links.
@@ -463,6 +464,14 @@ context.passage = (function() {
 			}
 			if (config.display) {
 				while ((targetArray = re2.exec(content)) !== null) {
+					var target2 = parseLink(targetArray[1],1);
+					if (/^\w+:\/\/\/?\w/i.test(target2)) {
+						// do nothing with external links
+					}	else {
+						linkList.push(target2);
+					}
+				}
+				while ((targetArray = re3.exec(content)) !== null) {
 					var target2 = parseLink(targetArray[1],1);
 					if (/^\w+:\/\/\/?\w/i.test(target2)) {
 						// do nothing with external links
