@@ -10,6 +10,7 @@ var dotGraph = {};
 								colorBW: true,
 								colorByNode: true,
 								colorByTag: false,
+								countWords: true,
 								display: true,
 								ends: true,
 								endTag: "End",
@@ -154,18 +155,20 @@ context.graph = (function() {
 		return linkGraph;
 	}
 
-	function getNameOrPid(passage, reversed) {
+	function getNameOrPid(passage, reversed, withCount) {
 		//Used to get the node label in the style requested by the settings, 
-		//except in tooltips, where we give the alternate label.
+		//except in tooltips, where we give the alternate label and a word count.
 		var name;
 		var returnAsName = (reversed ? !config.showNodeNames : config.showNodeNames);
 
 		if (returnAsName) {
-			name = scrub(passage.name);
+			name = passage.name;
 		} else {
-			name = passage.pid ? passage.pid : scrub("Untitled Passage");
+			name = passage.pid ? passage.pid : "Untitled Passage";
 		}
-		return name;
+		if (withCount && config.countWords)
+			name += " (" + passage.wordCount + " words)";
+		return scrub(name);
 	}
 
 	function getNameOrPidFromTarget(target) {
@@ -272,7 +275,7 @@ context.graph = (function() {
 			styles.push("label=\"" + label + "\"");
 		
 		//Add a tooltip.
-		styles.push("tooltip=" + getNameOrPid(passage, true));
+		styles.push("tooltip=" + getNameOrPid(passage, true, true));
 		return styles;
 	}
 
@@ -374,6 +377,7 @@ context.passage = (function() {
 		passageObj.links = links;
 		passageObj.leaf = (links.length === 0);
 		passageObj.textLength = source.innerText.length;
+		passageObj.wordCount = source.innerText.trim().split(/\s+/).length;
 		//Make it like Twine2.
 		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
 		passageObj.tagArray = tagArray;
@@ -521,6 +525,7 @@ context.settings = (function () {
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
+		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
 	}
 			
 	function scale() {
