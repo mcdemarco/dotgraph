@@ -22,7 +22,7 @@
 	</div>
 	<h2>Graph</h2>
 	<div id="notes">
-		<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "End" tag changes the shape of "End" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.    The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
+		<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  Traced nodes are hex-shaped.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "End" tag changes the shape of "End" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
 	</div>
 	<div>
 		<span id="stats" title="Twine">
@@ -32,25 +32,6 @@
 			<span id="average">0</span>&nbsp;links&nbsp;per&nbsp;node.
 		</span><br/>
 		<form id="settingsForm">
-			<input type="radio" id="nodeCheckbox0" name="nodeCheckbox" value="names"/><label for="nodeCheckbox">&nbsp;Passage titles</label>
-			<input type="radio" id="nodeCheckbox1" name="nodeCheckbox" value="pid" checked/><label for="nodeCheckbox">&nbsp;Passage ids (hover for title)</label>
-			<input type="checkbox" id="renumberCheckbox" name="renumberCheckbox"/><label for="renumberCheckbox">&nbsp;renumber from 1</label><br />
-			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="none"/>&nbsp;<label for="colorCheckbox0">Black & white</label>
-			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="node" checked/>&nbsp;<label for="colorCheckbox1">Color by node length</label>
-			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag"/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/>
-			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label>
-			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" checked/>&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/>
-			<input type="checkbox" id="specialCheckbox" checked/>&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryAuthor,&nbsp;StorySubtitle,&nbsp;etc.)<br/>
-			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value=""/><br/>
-			<input type="checkbox" id="checkpointsCheckbox" checked/>&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label>
-			<input type="checkbox" id="endsCheckbox" checked/>&nbsp;<label for="endsCheckbox">Detect end tags</label>
-			<input type="checkbox" id="lastTagCheckbox"/>&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/>
-			<input type="checkbox" id="clusterCheckbox"/>&nbsp;<label for="clusterCheckbox">Cluster by tags</label><br/>
-			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" checked/>&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label>
-			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR"/>&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label>
-			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT"/>&nbsp;<label for="rotateCheckbox2" title="Bottom to top">&uarr;</label>
-			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL"/>&nbsp;<label for="rotateCheckbox3" title="Right to left">&larr;</label>
-			<input type="checkbox" id="scaleCheckbox" checked/>&nbsp;<label for="scaleCheckbox">Scale to fit page</label><br/>
 		</form>
 		<button type="button" id="saveSvgButton">Save Image</button><br/>
 	</div>
