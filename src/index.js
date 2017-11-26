@@ -7,9 +7,7 @@ var dotGraph = {};
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
-								colorBW: true,
-								colorByNode: true,
-								colorByTag: false,
+								color: "length",
 								countWords: true,
 								display: true,
 								ends: true,
@@ -21,6 +19,7 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
+								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
 													"#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FA0087",
 													"#F8A19F", "#1CBE4F", "#C4451C", "#C075A6", "#90AD1C", 
@@ -119,7 +118,7 @@ context.graph = (function() {
 		
 		if (config.cluster) {
 			buffer = buffer.concat(writeClusters(storyObj.tagObject));
-		} else if (config.colorByTag) {
+		} else if (config.color == "tag") {
 			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
@@ -167,7 +166,7 @@ context.graph = (function() {
 			name = passage.pid ? passage.pid : "Untitled Passage";
 		}
 		if (withCount && config.countWords)
-			name += " (" + passage.wordCount + " words)";
+			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		return scrub(name);
 	}
 
@@ -241,7 +240,9 @@ context.graph = (function() {
 		var tag = passage.theTag;
 
 		//Start with any special shape for the passage.
-		if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+		if (passage.trace) {
+			styles.push("shape=hexagon");
+		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.push("shape=doublecircle");
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
 			styles.push("shape=egg");
@@ -255,15 +256,15 @@ context.graph = (function() {
 			styles.push("style=\"filled,diagonals\"");
 		} else if (styles.length) {
 			styles.push("style=\"filled,bold\"");
-		}	else if (!config.colorBW) {
+		}	else if (config.color != "bw") {
 			styles.push("style=filled");
 		}
 		
 		//Calculate color.
-		if (config.colorByNode) {
+		if (config.color == "length") {
 			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
-		} else if (config.colorByTag && tag) {
+		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
@@ -337,6 +338,8 @@ context.init = (function() {
 
 	function load() {
 		//Onload function.
+		context.settings.load();
+		context.settings.write();
 		activateForm();
 		context.graph.convert();
 	}
@@ -345,6 +348,7 @@ context.init = (function() {
 	function activateForm() {
 		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
 		document.getElementById("omitTags").addEventListener('change', context.graph.convert, false);
+		document.getElementById("trace").addEventListener('change', context.graph.convert, false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
@@ -377,7 +381,7 @@ context.passage = (function() {
 		passageObj.links = links;
 		passageObj.leaf = (links.length === 0);
 		passageObj.textLength = source.innerText.length;
-		passageObj.wordCount = source.innerText.trim().split(/\s+/).length;
+		passageObj.wordCount = source.innerText.trim() ? source.innerText.trim().split(/\s+/).length: 0;
 		//Make it like Twine2.
 		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
 		passageObj.tagArray = tagArray;
@@ -385,6 +389,7 @@ context.passage = (function() {
 		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
 		passageObj.special = (specialPassageList.indexOf(passageObj.name) > -1);
 		passageObj.omit = hasOmittedTag(passageObj);
+		passageObj.trace = (config.trace && source.innerText.indexOf(config.trace) > -1);
 
 		return passageObj;
 	}
@@ -450,7 +455,7 @@ context.passage = (function() {
 		var re = /\[\[(.*?)\]\]/g;
 		var re2 = /\<\<display \"(.*?)\"\>\>/g;
 		var re3 = /\(display: \"(.*?)\"\)/g;
-		var targetArray;
+		var targetArray, target, target2;
 		if (content) {
 			//Clean up the content a bit (snowman), then extract links.
 			// Remove /* comments */
@@ -459,7 +464,7 @@ context.passage = (function() {
 			content = content.replace(/^\/\/.*(\r\n?|\n)/g, '');
 			
 			while ((targetArray = re.exec(content)) !== null) {
-				var target = parseLink(targetArray[1],0);
+				target = parseLink(targetArray[1],0);
 				if (/^\w+:\/\/\/?\w/i.test(target)) {
 					// do nothing with external links
 				}	else {
@@ -468,7 +473,7 @@ context.passage = (function() {
 			}
 			if (config.display) {
 				while ((targetArray = re2.exec(content)) !== null) {
-					var target2 = parseLink(targetArray[1],1);
+					target2 = parseLink(targetArray[1],1);
 					if (/^\w+:\/\/\/?\w/i.test(target2)) {
 						// do nothing with external links
 					}	else {
@@ -476,7 +481,7 @@ context.passage = (function() {
 					}
 				}
 				while ((targetArray = re3.exec(content)) !== null) {
-					var target2 = parseLink(targetArray[1],1);
+					target2 = parseLink(targetArray[1],1);
 					if (/^\w+:\/\/\/?\w/i.test(target2)) {
 						// do nothing with external links
 					}	else {
@@ -494,8 +499,10 @@ context.settings = (function () {
 
 	return {
 		isOmittedTag: isOmittedTag,
+		load: load,
 		parse: parse,
-		scale: scale
+		scale: scale,
+		write: write
 	};
 
 	function isOmittedTag(tag) {
@@ -510,12 +517,35 @@ context.settings = (function () {
 		}
 	}
 
+	function load() {
+		//Parse the StorySettings for dotgraph presets.
+		var StorySettings;
+		if (window.document.getElementById("storeArea"))
+			StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
+		else 
+			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
+
+		if (!StorySettings)
+			return;
+
+		var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+		try {
+			dgSettings = JSON.parse(dgSettings);
+		} catch(e) {
+			console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
+			return;
+		}
+		_.each(dgSettings, function(value, key) {
+			config[key] = value;
+		});
+	}
+
 	function parse() {
+		//Check for config changes.
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
 		config.cluster = document.getElementById("clusterCheckbox") ? document.getElementById("clusterCheckbox").checked : false;
-		config.colorBW = document.getElementById("colorCheckbox0") ? document.getElementById("colorCheckbox0").checked : false;
-		config.colorByNode = document.getElementById("colorCheckbox1") ? document.getElementById("colorCheckbox1").checked : false;
-		config.colorByTag = document.getElementById("colorCheckbox2") ? document.getElementById("colorCheckbox2").checked : false;
+//rewriting to bw/length/tag
+		config.color = document.querySelector("input[name='colorCheckbox']:checked") ? document.querySelector("input[name='colorCheckbox']:checked").value : "length";
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
@@ -526,6 +556,7 @@ context.settings = (function () {
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
+		config.trace = document.getElementById("trace") ? trim(document.getElementById("trace").value) : "";
 	}
 			
 	function scale() {
@@ -534,6 +565,31 @@ context.settings = (function () {
 			svgElt.setAttribute("width","100%");
 			svgElt.removeAttribute("height");
 		}
+	}
+
+	function write() {
+		//Write the current config object as a settings panel.
+		var output = _.template('<input type="radio" id="nodeCheckbox0" name="nodeCheckbox" value="names" <%= (showNodeNames ? "checked" : "") %>/><label for="nodeCheckbox">&nbsp;Passage titles</label> \
+			<input type="radio" id="nodeCheckbox1" name="nodeCheckbox" value="pid"  <%= (showNodeNames ? "" : "checked") %> /><label for="nodeCheckbox">&nbsp;Passage ids (hover for title)</label> \
+			<input type="checkbox" id="renumberCheckbox" name="renumberCheckbox" <%= (renumber ? "checked" : "") %>/><label for="renumberCheckbox">&nbsp;renumber from 1</label><br /> \
+			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="bw" <%= (color == "bw" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox0">Black & white</label> \
+			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="length" <%= (color == "length" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox1">Color by node length</label> \
+			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
+			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
+			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
+			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryAuthor,&nbsp;StorySubtitle,&nbsp;etc.)<br/> \
+			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
+			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
+			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
+			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/> \
+			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags</label> \
+			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /><br/> \
+			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
+			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR" <%= (rotation == "LR" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label> \
+			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT" <%= (rotation == "BT" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox2" title="Bottom to top">&uarr;</label> \
+			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL" <%= (rotation == "RL" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox3" title="Right to left">&larr;</label> \
+			<input type="checkbox" id="scaleCheckbox" <%= (scale ? "checked" : "") %> />&nbsp;<label for="scaleCheckbox">Scale to fit page</label><br/>');
+		document.getElementById("settingsForm").innerHTML = output(config);
 	}
 
 	function splitAndTrim(tagList) {
@@ -547,6 +603,13 @@ context.settings = (function () {
 
 		document.getElementById("omitTagsFakeRadioButton").checked = (tagArrayTrimmed.length > 0);		
 		return tagArrayTrimmed;
+	}
+
+	function trim(tracePhrase) {
+		tracePhrase = tracePhrase.trim();
+
+		document.getElementById("traceFakeRadioButton").checked = (tracePhrase.length > 0);		
+		return tracePhrase;
 	}
 
 })();
