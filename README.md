@@ -15,6 +15,10 @@ DotGraph may fail to save the SVG in Safari; if it fails, try a different browse
 
 ## Versions
 
+### 2.1.0
+
+Add a text tracing option and and support for configuration using the StorySettings passage.
+
 ### 2.0.6
 
 Add support for Harlowe's display macro, plus fix a leaf counting issue.
