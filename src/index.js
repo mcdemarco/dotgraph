@@ -29,7 +29,7 @@ var dotGraph = {};
 								paletteExceptions: {
 									start: "#C8C8C8",
 									ends: "#C8C8C8",
-									other: "#FF6666",
+									unreachable: "#FF6666",
 									untagged: "#FFFFFF",
 									default: "#FFFFFF"
 								}
@@ -281,7 +281,7 @@ context.graph = (function() {
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.ends + "\"");
 		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.other + "\"");
+			styles.push("fillcolor=\"" + config.paletteExceptions.unreachable + "\"");
  		} else if (config.color == "tag") {
 			styles.push("fillcolor=\"" + config.paletteExceptions.untagged + "\"");
  		} else {
