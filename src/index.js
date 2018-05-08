@@ -25,8 +25,15 @@ var dotGraph = {};
 													"#F8A19F", "#1CBE4F", "#C4451C", "#C075A6", "#90AD1C", 
 													"#B00068", "#AA0DFE", "#FC1CBF", "#1CFFCE", "#F6222E", 
 													"#85660D", "#325A9B", "#B10DA1", "#A0A0A0", "#782AB6",
-													"#565656"]
-								};
+													"#565656"],
+								paletteExceptions: {
+									start: "#C8C8C8",
+									ends: "#C8C8C8",
+									other: "#FF6666",
+									untagged: "#FFFFFF",
+									default: "#FFFFFF"
+								}
+							 };
 
 	var specialPassageList = ["StoryTitle", "StoryIncludes",
 														"StoryAuthor", "StorySubtitle", "StoryMenu", "StorySettings",
@@ -269,6 +276,16 @@ context.graph = (function() {
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+		} else if (pid == storyObj.startNode) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.ends + "\"");
+		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.other + "\"");
+ 		} else if (config.color == "tag") {
+			styles.push("fillcolor=\"" + config.paletteExceptions.untagged + "\"");
+ 		} else {
+			styles.push("fillcolor=\"" + config.paletteExceptions.default + "\"");
 		}
 
 		//Rename the node if a label was passed in.
