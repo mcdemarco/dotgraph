@@ -542,7 +542,7 @@ context.settings = (function () {
 		else 
 			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
 
-		if (!StorySettings)
+		if (!StorySettings || !StorySettings.innerText)
 			return;
 
 		var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
