@@ -17,6 +17,8 @@ var dotGraph = {};
 								omitSpecialPassages: true,
 								omitSpecialTags: true,
 								omitTags: [],
+								prefix: "",
+								postfix: "",
 								renumber: false,
 								rotation: "TB",
 								scale: true,
@@ -169,7 +171,7 @@ context.graph = (function() {
 		return linkGraph;
 	}
 
-	function getNameOrPid(passage, reversed, withCount) {
+	function getNameOrPid(passage, reversed, withCount, withAffix) {
 		//Used to get the node label in the style requested by the settings, 
 		//except in tooltips, where we give the alternate label and a word count.
 		var name;
@@ -182,6 +184,8 @@ context.graph = (function() {
 		}
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
+		if (withAffix)
+			name = config.prefix + name + config.postfix;
 		return scrub(name);
 	}
 
@@ -236,10 +240,9 @@ context.graph = (function() {
 		var styles = stylePassage(passage, label);
 
 		var links = graphLinks(passage, scrubbedNameOrPid);
-		
-		//Push the node itself with styles (because it's always styled in some way).
+		//Push the node itself and the styles (because it's always styled in some way).
 		result.push("\r\n" + scrubbedNameOrPid + " [" + styles.join(' ') + "]");
-
+		
 		//Push the link list.
 		result = result.concat(links);
 
@@ -298,13 +301,22 @@ context.graph = (function() {
 			styles.push("fillcolor=\"" + config.paletteExceptions.default + "\"");
 		}
 
-		//Rename the node if a label was passed in.
-		if (label)
-			styles.push("label=\"" + label + "\"");
+		//Rename the node if a label or prefix was passed in.
+		if (label || config.prefix || config.postfix) {
+			if (label)
+				styles.push("label=\"" + config.prefix + label + config.postfix + "\"");
+			else
+				styles.push("label=" + getNameOrPid(passage, false, false, true));
+		}
 		
-		//Add a tooltip.
-		if (config.tooltips)
+		//Add a tooltip.  
+		/*if ((config.prefix || config.postfix) && !config.tooltips) {
+			//In the prefix case we don't want to default to the auto-tip, but normally we do.
+			styles.push("tooltip=" + getNameOrPid(passage));
+		} else*/
+		if (config.tooltips) {
 			styles.push("tooltip=" + getNameOrPid(passage, true, true));
+		}
 		return styles;
 	}
 
