@@ -309,11 +309,7 @@ context.graph = (function() {
 				styles.push("label=" + getNameOrPid(passage, false, false, true));
 		}
 		
-		//Add a tooltip.  
-		/*if ((config.prefix || config.postfix) && !config.tooltips) {
-			//In the prefix case we don't want to default to the auto-tip, but normally we do.
-			styles.push("tooltip=" + getNameOrPid(passage));
-		} else*/
+		//Add a tooltip.
 		if (config.tooltips) {
 			styles.push("tooltip=" + getNameOrPid(passage, true, true));
 		}
@@ -589,6 +585,7 @@ context.settings = (function () {
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
+		config.omitSpecialTags = document.getElementById("specialTagCheckbox") ? document.getElementById("specialTagCheckbox").checked : false;
 		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
@@ -617,8 +614,8 @@ context.settings = (function () {
 			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
 			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
-			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;StoryMenu,&nbsp;etc.)<br/> \
-			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;passages&nbsp;with&nbsp;special&nbsp;tags</label> (script,&nbsp;stylesheet,&nbsp;etc.)<br/> \
+			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
+			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;by&nbsp;special&nbsp;tags</label> (script,&nbsp;etc.)<br/> \
 			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
 			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
 			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
