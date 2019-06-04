@@ -10,6 +10,7 @@ var dotGraph = {};
 								color: "length",
 								countWords: true,
 								display: true,
+								dotExtension: "txt",
 								ends: true,
 								endTag: "end",
 								lastTag: false,
@@ -107,7 +108,7 @@ context.graph = (function() {
 	function saveDot() {
 		var output = document.getElementById("dotfile").value;
 		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "dot" + Date.now() + ".txt", true);
+		filesaver.saveAs(blob, "dot" + Date.now() + "." + config.dotExtension, true);
  	}
 
 	function saveSvg() {
