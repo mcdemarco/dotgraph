@@ -20,6 +20,7 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
+								tooltips: true,
 								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
 													"#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FA0087",
@@ -301,7 +302,8 @@ context.graph = (function() {
 			styles.push("label=\"" + label + "\"");
 		
 		//Add a tooltip.
-		styles.push("tooltip=" + getNameOrPid(passage, true, true));
+		if (config.tooltips)
+			styles.push("tooltip=" + getNameOrPid(passage, true, true));
 		return styles;
 	}
 
