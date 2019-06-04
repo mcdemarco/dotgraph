@@ -10,7 +10,7 @@ var dotGraph = {};
 								color: "length",
 								countWords: true,
 								display: true,
-								dotExtension: "txt",
+								dotExtension: "gv",
 								ends: true,
 								endTag: "end",
 								lastTag: false,
