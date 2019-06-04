@@ -11,7 +11,7 @@ var dotGraph = {};
 								countWords: true,
 								display: true,
 								ends: true,
-								endTag: "End",
+								endTag: "end",
 								lastTag: false,
 								omitSpecialPassages: true,
 								omitSpecialTags: true,
