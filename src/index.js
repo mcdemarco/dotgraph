@@ -2,7 +2,7 @@ var filesaver = require("filesaver.js-npm");
 var _ = require("underscore");
 var dotGraph = {};
 
-(function(context) { 
+(function(context) {
 
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
@@ -14,6 +14,7 @@ var dotGraph = {};
 								endTag: "End",
 								lastTag: false,
 								omitSpecialPassages: true,
+								omitSpecialTags: true,
 								omitTags: [],
 								renumber: false,
 								rotation: "TB",
@@ -31,6 +32,7 @@ var dotGraph = {};
 									ends: "#C8C8C8",
 									unreachable: "#FF6666",
 									untagged: "#FFFFFF",
+									trace: "#FF8000",
 									default: "#FFFFFF"
 								}
 							 };
@@ -41,6 +43,10 @@ var dotGraph = {};
 														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
 														"PassageDone", "PassageFooter", "PassageHeader", "PassageReady",
 														"MenuOptions", "MenuShare"];
+
+	var specialTagList = ["annotation", "debug-footer", "debug-header", "debug-startup", 
+												"footer", "haml", "header", "script", "startup", "stylesheet", 
+												"twee2", "transition", "Twine.private", "widget"];
 
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
@@ -276,6 +282,8 @@ context.graph = (function() {
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+ 		} else if (passage.trace) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
 		} else if (pid == storyObj.startNode) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
@@ -428,11 +436,11 @@ context.passage = (function() {
 	}
 
 	function hasOmittedTag(passage) {
-		if (config.omitTags.length == 0) 
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
 			return false;
 		else {
-			for (var t=0; t<config.omitTags.length; t++) {
-				if (hasTag(passage,config.omitTags[t]))
+			for (var t=0; t<passage.tagArray.length; t++) {
+				if (context.settings.isOmittedTag(passage.tagArray[t]))
 					return true;
 			}
 			return false;
@@ -523,15 +531,15 @@ context.settings = (function () {
 	};
 
 	function isOmittedTag(tag) {
-		if (config.omitTags.length == 0) 
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
 			return false;
 		else {
-			for (var t=0; t<config.omitTags.length; t++) {
-				if (config.omitTags[t] == tag)
-					return true;
-			}
-			return false;
+			if (config.omitTags.indexOf(tag) > -1)
+				return true;
+			if (config.omitSpecialTags && specialTagList.indexOf(tag) > -1)
+				return true;
 		}
+		return false;
 	}
 
 	function load() {
@@ -594,7 +602,8 @@ context.settings = (function () {
 			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
 			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
-			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryAuthor,&nbsp;StorySubtitle,&nbsp;etc.)<br/> \
+			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;StoryMenu,&nbsp;etc.)<br/> \
+			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;passages&nbsp;with&nbsp;special&nbsp;tags</label> (script,&nbsp;stylesheet,&nbsp;etc.)<br/> \
 			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
 			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
 			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
