@@ -23,6 +23,8 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
+								snowstick: false,
+								snowstickObj: {},
 								tooltips: true,
 								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
@@ -37,7 +39,9 @@ var dotGraph = {};
 									unreachable: "#FF6666",
 									untagged: "#FFFFFF",
 									trace: "#FF8000",
-									default: "#FFFFFF"
+									default: "#FFFFFF",
+									read: "#B3EE3A",
+									leaf: "#698B22"
 								}
 							 };
 
@@ -258,7 +262,9 @@ context.graph = (function() {
 		var tag = passage.theTag;
 
 		//Start with any special shape for the passage.
-		if (passage.trace) {
+		if (config.snowstick && passage.ssBookmark) {
+			styles.push("shape=note");
+		} else if (passage.trace) {
 			styles.push("shape=hexagon");
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.push("shape=doublecircle");
@@ -287,6 +293,10 @@ context.graph = (function() {
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.leaf + "\"");
+ 		} else if (config.snowstick && passage.ssRead) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.read + "\"");
  		} else if (passage.trace) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
 		} else if (pid == storyObj.startNode) {
@@ -427,6 +437,12 @@ context.passage = (function() {
 		passageObj.omit = hasOmittedTag(passageObj);
 		passageObj.trace = (config.trace && source.innerText.indexOf(config.trace) > -1);
 
+		//SnowStick.
+		if (config.snowstick) {
+			passageObj.ssLeaf = (config.snowstickObj.leaf.indexOf(passageObj.name) > -1);
+			passageObj.ssRead = (config.snowstickObj.read.indexOf(passageObj.name) > -1);
+			passageObj.ssBookmark = (config.snowstickObj.bookmark == passageObj.name);
+		}
 		return passageObj;
 	}
 
@@ -554,6 +570,17 @@ context.settings = (function () {
 	}
 
 	function load() {
+		//Check localStorage for snowstick.
+		try {
+			config.snowstickObj["read"] = localStorage.getItem("snowstick-read") ? JSON.parse(localStorage.getItem("snowstick-read")) : [];
+			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf") ? JSON.parse(localStorage.getItem("snowstick-leaf")) : [];
+			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark") ? localStorage.getItem("snowstick-bookmark") : "";
+			config.snowstick = (config.snowstickObj.leaf.length > 0 || config.snowstickObj.read.length > 0 || config.snowstickObj.bookmark.length > 0);
+		} catch (e) {
+			config.snowstick = false;
+			console.log("Error checking local storage for SnowStick data: " + e.description);
+		}
+
 		//Parse the StorySettings for dotgraph presets.
 		var StorySettings;
 		if (window.document.getElementById("storeArea"))
@@ -561,19 +588,23 @@ context.settings = (function () {
 		else 
 			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
 
-		if (!StorySettings || !StorySettings.innerText || StorySettings.innerText.indexOf("dotgraph:") < 0)
-			return;
-
-		var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
-		try {
-			dgSettings = JSON.parse(dgSettings);
-		} catch(e) {
-			console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
-			return;
+		if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
+			var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+			try {
+				dgSettings = JSON.parse(dgSettings);
+			} catch(e) {
+				console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
+				return;
+			}
+			_.each(dgSettings, function(value, key) {
+				//Do not reset snowstick to true if there's no data.
+				if (key != "snowstick" || !value) 
+					config[key] = value;
+			});
 		}
-		_.each(dgSettings, function(value, key) {
-			config[key] = value;
-		});
+		//Switch color to snowstick if there's data.
+		if (config.snowstick) 
+			config.color = "snow";
 	}
 
 	function parse() {
@@ -611,7 +642,8 @@ context.settings = (function () {
 			<input type="checkbox" id="renumberCheckbox" name="renumberCheckbox" <%= (renumber ? "checked" : "") %>/><label for="renumberCheckbox">&nbsp;renumber from 1</label><br /> \
 			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="bw" <%= (color == "bw" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox0">Black & white</label> \
 			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="length" <%= (color == "length" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox1">Color by node length</label> \
-			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
+			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label> \
+			<input type="radio" id="colorCheckbox3" name="colorCheckbox" value="snow" <%= (color == "snow" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox3">Snowstick</label><br/> \
 			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
 			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
