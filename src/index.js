@@ -7,6 +7,7 @@ var dotGraph = {};
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
+								clusterTags: [],
 								color: "length",
 								countWords: true,
 								display: true,
@@ -139,7 +140,8 @@ context.graph = (function() {
 		
 		if (config.cluster) {
 			buffer = buffer.concat(writeClusters(storyObj.tagObject));
-		} else if (config.color == "tag") {
+		}
+		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
 			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
@@ -341,7 +343,7 @@ context.graph = (function() {
 		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag)) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
 				clusters.push("subgraph cluster_" + clusterIndex + " {");
 				clusters.push("label=" + scrub(tag));
 				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
@@ -393,8 +395,9 @@ context.init = (function() {
 	//Private.
 	function activateForm() {
 		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
-		document.getElementById("omitTags").addEventListener('change', context.graph.convert, false);
-		document.getElementById("trace").addEventListener('change', context.graph.convert, false);
+		document.getElementById("clusterTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
@@ -611,7 +614,7 @@ context.settings = (function () {
 		//Check for config changes.
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
 		config.cluster = document.getElementById("clusterCheckbox") ? document.getElementById("clusterCheckbox").checked : false;
-//rewriting to bw/length/tag
+		config.clusterTags =  document.getElementById("clusterTags") ? splitAndTrim(document.getElementById("clusterTags").value) : [];
 		config.color = document.querySelector("input[name='colorCheckbox']:checked") ? document.querySelector("input[name='colorCheckbox']:checked").value : "length";
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
@@ -648,11 +651,11 @@ context.settings = (function () {
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
 			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
 			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;by&nbsp;special&nbsp;tags</label> (script,&nbsp;etc.)<br/> \
-			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
+			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="text" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(", ")%>"/><br/> \
 			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
 			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
 			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/> \
-			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags</label> \
+			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags:</label>&nbsp;<input type="text" id="clusterTags" placeholder="Separate tags with commas; leave blank for all tags." value="<%=clusterTags.join(", ")%>"/><br/> \
 			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /><br/> \
 			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
 			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR" <%= (rotation == "LR" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label> \
