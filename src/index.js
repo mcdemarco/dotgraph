@@ -41,8 +41,8 @@ var dotGraph = {};
 									untagged: "#FFFFFF",
 									trace: "#FF8000",
 									default: "#FFFFFF",
-									read: "#B3EE3A",
-									leaf: "#698B22"
+									leafHue: 0.30,
+									readHue: 0.22
 								}
 							 };
 
@@ -59,7 +59,7 @@ var dotGraph = {};
 
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
-									startNodeName: "Start", 
+									startNodeName: "Start",
 									leaves: 0,
 									links: 0,
 									tightEnds: 0,
@@ -206,6 +206,10 @@ context.graph = (function() {
 		return name;
 	}
 
+	function makeHSV(hue, sat, val) {
+		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
+	}
+
 	function passages() {
 		//Graph passages.
 		var subbuffer = [];
@@ -259,6 +263,8 @@ context.graph = (function() {
 		var styles = [];
 
 		var hue = 0;
+		var sat = 0;
+		var val = 1;
 		var pid = passage.pid;
 		var content = passage.content;
 		var tag = passage.theTag;
@@ -288,17 +294,32 @@ context.graph = (function() {
 		
 		//Calculate color.
 		if (config.color == "length") {
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
+			//Graphviz supports HSV, so use it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
+			//Solid real leaves for clarity.
+			hue = config.paletteExceptions.leafHue;
+			styles.push("fillcolor=\"" + makeHSV(hue,0.90,0.50) + "\"");
  		} else if (config.snowstick && passage.ssLeaf) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.leaf + "\"");
+			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.leafHue;
+			sat = passage.ssLeaf;
+			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
  		} else if (config.snowstick && passage.ssRead) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.read + "\"");
+			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.readHue;
+			sat = passage.ssRead;
+			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
  		} else if (passage.trace) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
 		} else if (pid == storyObj.startNode) {
@@ -442,8 +463,8 @@ context.passage = (function() {
 
 		//SnowStick.
 		if (config.snowstick) {
-			passageObj.ssLeaf = (config.snowstickObj.leaf.indexOf(passageObj.name) > -1);
-			passageObj.ssRead = (config.snowstickObj.read.indexOf(passageObj.name) > -1);
+			passageObj.ssLeaf = Math.max(config.snowstickObj.leaf.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.leaf.length,1);
+			passageObj.ssRead = Math.max(config.snowstickObj.read.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.read.length,1);
 			passageObj.ssBookmark = (config.snowstickObj.bookmark == passageObj.name);
 		}
 		return passageObj;
