@@ -25,21 +25,26 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ## Mode
 
-SnowStick has two main `modes`, *proof* and *read*, which can be set at the top of the SnowStick JavaScript.
+SnowStick has two main `modes`, *proof* and *read*, which can be set at the top of the SnowStick JavaScript, along with some minor configuration settings you can change:
 
     var config = {
       mode: 'read',
 	  openBookmark: true,
-      leafedMessage: ' (all children checked) '
+      leafedMessage: ' (all children checked) ',
+	  bar: true
     };
 
 In *proof* mode:
-* the passage title appears in a footer, and a note appears when the branch is completely proofed; you can change the note using the `leafedMessage` option.
+
+* the passage title and overall percentage read appear in a footer, and a note appears when the branch is completely proofed; you can change the note using the `leafedMessage` option
+* the percentage can be replaced with a gradient bar using the *bar* setting.
 * the passage is only marked proofed when the footer checkbox is checked off.
 * the links are restyled according to whether they're completely new, already proofed, or completed.
 
 In *read* mode:
-* the percentage read is the only added UI element.
+
+* the percentage read is the only added UI element (hover on it for details);
+* the percentage can be changed from text to a bar with the *bar* setting
 * the passage is automatically marked read when read.
 * the links are restyled according to whether they're completely new, previously read, or completed.
 
@@ -66,4 +71,4 @@ There is no build process.
 
 ### 0.1
 
-Needs to be cleared between stories. 
+Betaish.

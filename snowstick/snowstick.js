@@ -35,9 +35,10 @@ var SnowStick = function(){
 	 */
 
   var config = {
-    mode: 'read',
+    mode: 'proof',
 		openBookmark: true,
-		leafedMessage: ' (all children checked) '
+		leafedMessage: ' (all children checked) ',
+		bar: true
   };
 
 	var previous = "";
@@ -59,16 +60,18 @@ var SnowStick = function(){
 
 		//Create the proofing UI.
 		if (config.mode == 'read')
-			$("body").append('<div id="snowstick-percent" title="">0%</div>');
+			$("body").append('<div id="snowstick-percent" title=""></div>');
 		else
 			$("body").append('<div id="snowstick-footer">Proofing ' +
 											 '<label for="snowstick-check" id="snowstick-name" title=""></label>: ' +
 											 '<input id="snowstick-check" type="checkbox"/>' + 
 											 '<span id="snowstick-leafed" style="display:none;"> ' + 
 											 config.leafedMessage + ' </span>' + 
-											 '<span id="snowstick-percent">0%</span></div>');
+											 '<span id="snowstick-percent"></span></div>');
 		//This class is used to change link styles, including crossing out leafed options.
 		$("body").addClass("snowstick").addClass("snowstick-" + config.mode);
+		if (config.bar)
+			$("body").addClass("snowstick-bar");
 
 		$(document).on('startstory start.sm.story', function() {
 			//Extend the passages object. 
@@ -83,7 +86,7 @@ var SnowStick = function(){
 			}
 		
 			//Initialize the percentage.
-			$("#snowstick-percent").html(Math.round(100 * proofs.length/window.story.passages.length) + "%");
+			percent(proofs.length);
 
 			//If there's a bookmark saved, go to it.
 			if (config.openBookmark) {
@@ -103,9 +106,11 @@ var SnowStick = function(){
 				if (window.passage.name) {
 					window.passage.proofed = true;
 					var newLength = SnowStick.pusher("read",window.passage.name,true);
-					$("#snowstick-percent").html(Math.round(100 * newLength/window.story.passages.length) + "%");
+					var pcnt = percent(newLength);
+
 					//Put the passage id and title in a tooltip.
-					$("#snowstick-percent").attr("title",window.passage.id + ": " + window.passage.name);
+					var title = window.passage.id + ": " + window.passage.name + (config.bar ? " (" + pcnt + ")" : "");
+					$("#snowstick-percent").attr("title",title);
 
 					//Style the links.  Expensive.
 					$("#passage a[data-passage]").each(function(){
@@ -178,7 +183,7 @@ var SnowStick = function(){
 				
 				//Update local storage and the UI.
 				var newLength = SnowStick.pusher("read", window.passage.name, proofed);
-				$("#snowstick-percent").html(Math.round(100 * newLength/window.story.passages.length) + "%");
+				percent(newLength);
 			});
 		}
 		//Both cases.
@@ -194,6 +199,26 @@ var SnowStick = function(){
   };
 
 	/* helper functions */
+
+	/**
+	 Sets the percentage of passages read.
+
+	 @method percent
+	 @param numer {int} the number of passages read for calculating a percentage
+	 @return {string} the formatted percentage (e.g., "93%")
+	**/
+
+	function percent(numer) {
+		var percent = Math.round(100 * numer/window.story.passages.length) + "%";
+		if (config.bar) {
+			$("#snowstick-percent").css("width",percent);
+			if (config.mode == "proof") {
+				$("#snowstick-footer").css("background-image", "linear-gradient(to right, lightsalmon, white " + percent + ")");
+			}
+		} else
+			$("#snowstick-percent").html(percent);
+		return percent;
+	}
 
 	/**
 	 Clears a local storage key.
@@ -288,6 +313,7 @@ var SnowStick = function(){
   // public methods and variable(s)
   return {
     init:init,
+    percent:percent,
     previous:previous,
 		pusher:pusher,
 		retrieve:retrieve,
