@@ -9,6 +9,12 @@
     background-color: lightsalmon;
     position: bottom center;
     width:100%;
+    padding-left:3px;
+}
+
+.snowstick-bar #snowstick-footer {
+  background-color: white;
+  background-image: linear-gradient(to right, lightsalmon, white 1%);
 }
 
 #snowstick-name {
@@ -29,6 +35,22 @@
     padding:3px 6px;
     border: 1px solid slategray;
     border-radius: 3px;
+}
+
+.snowstick-bar.snowstick-proof #snowstick-percent {
+    width: auto!important;
+}
+
+.snowstick-bar.snowstick-read #snowstick-percent {
+    display:block;
+    position:fixed;
+    left:0;
+    bottom:0;
+    height:2px;
+    width:1%;
+    background-color: rgba(204,136,41,0.45);
+    border: 0;
+    border-radius: 0;
 }
 
 /* styling of completed leaf nodes and of read (or proofed) nodes */
