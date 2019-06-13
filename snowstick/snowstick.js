@@ -35,10 +35,10 @@ var SnowStick = function(){
 	 */
 
   var config = {
-    mode: 'proof',
+    mode: 'read',
 		openBookmark: true,
 		leafedMessage: ' (all children checked) ',
-		bar: true
+		bar: false
   };
 
 	var previous = "";
