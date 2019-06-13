@@ -596,9 +596,10 @@ context.settings = (function () {
 	function load() {
 		//Check localStorage for snowstick.
 		try {
-			config.snowstickObj["read"] = localStorage.getItem("snowstick-read") ? JSON.parse(localStorage.getItem("snowstick-read")) : [];
-			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf") ? JSON.parse(localStorage.getItem("snowstick-leaf")) : [];
-			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark") ? localStorage.getItem("snowstick-bookmark") : "";
+			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
+			config.snowstickObj["read"] = localStorage.getItem("snowstick-read" + ifid) ? JSON.parse(localStorage.getItem("snowstick-read" + ifid)) : [];
+			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf" + ifid) ? JSON.parse(localStorage.getItem("snowstick-leaf" + ifid)) : [];
+			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + ifid) ? localStorage.getItem("snowstick-bookmark" + ifid) : "";
 			config.snowstick = (config.snowstickObj.leaf.length > 0 || config.snowstickObj.read.length > 0 || config.snowstickObj.bookmark.length > 0);
 		} catch (e) {
 			config.snowstick = false;

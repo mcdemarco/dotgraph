@@ -2,7 +2,6 @@
 
 SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman (or other story formats based on it), in order to track your reading/proofing progress and graph it with DotGraph.  SnowStick can be used without DotGraph, in which case you can still tell where you've been by the link styling (crossed-out for completed branches, squiggly underlining for previously visited links, and no alteration for unvisited links).
 
-
 ## Installation
 
 ### Twine 2
@@ -45,7 +44,7 @@ In *read* mode:
 * the links are restyled according to whether they're completely new, previously read, or completed.
 
 There is also a *clear* mode for clearing all read data from the current browser.
-You should use this when switching between stories, because SnowStick currently does not handle more than one story at a time.
+You can use this to start fresh on the current story, or to switch between Twine 1 stories. (See *Issues* below).
 
 In *off* mode, SnowStick is turned off (without uninstalling the code).
 
@@ -55,9 +54,9 @@ SnowStick will, optionally, start the story from the passage you left off at.  I
 
 ## Issues
 
-SnowStick stores its data in your browser's localStorage, so for it to work you must open your story in the same browser and not clear or disable your browser's local storage while reading.  You can make changes to the story and republish it, however, without confusing SnowStick.
+SnowStick stores its data in your browser's localStorage, so for it to work you must open your story in the same browser and not clear or disable your browser's local storage while reading.  You can make changes to the story and republish it, however, without confusing SnowStick.  (If you change the IFID, it will be treated as a different story.)
 
-As mentioned above, SnowStick needs to be cleared between stories.  To read more than one story at a time, use a different browser for each story (*e.g.,* Chrome vs. Brave).
+In certain cases, such as Twine 1 stories and other stories without IFID, SnowStick will need to be cleared between stories.  To read more than one such story at a time, use a different browser for each story (*e.g.,* Chrome vs. Brave).  (This is not a concern for Twine 2 stories that have distinct IFIDs.)
 
 ## Building
 
