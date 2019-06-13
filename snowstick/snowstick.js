@@ -9,12 +9,6 @@
  * put this js into your story javascript, and the CSS in snowstick.css into your story stylesheet.
  */
 
-
-/* TODO:
- * support multiple stories on the same localStorage.  
- *  (right now only works on one story at a time; see clear mode)
- */
-
 var SnowStick = function(){
 
 	/* Configuration options: 
@@ -29,7 +23,7 @@ var SnowStick = function(){
 	 *   the passage is automatically marked read when read.
 	 *   the links are restyled according to whether they're completely new, previously read, or completed.
 	 * clear mode:
-	 *   clears snowstick data so you can start over on the same story.
+	 *   clears snowstick data so you can start over on the same story or switch between Twine 1 stories.
 	 * off mode:
 	 *   turns snowstick off without uninstalling the code.
 	 *
@@ -47,6 +41,7 @@ var SnowStick = function(){
   };
 
 	var previous = "";
+	var ifid = "";
 
   // Here there be dragons.
 
@@ -54,6 +49,8 @@ var SnowStick = function(){
 		//Test init.
 		if (config.mode == 'off')
 			return;
+
+		ifid += $("tw-storydata").attr("ifid") ? "-" + $("tw-storydata").attr("ifid").toUpperCase() : "";
 		if (config.mode == 'clear') {
 			clear("read");
 			clear("leaf");
@@ -207,7 +204,7 @@ var SnowStick = function(){
 	**/
 
   function clear(keya) {
-		var key = "snowstick-" + keya;
+		var key = "snowstick-" + keya + ifid;
 		try {
 			localStorage.removeItem(key);
 		} catch (e) {
@@ -228,7 +225,7 @@ var SnowStick = function(){
 	**/
 
   function store(keya,arya,isString) {
-		var key = "snowstick-" + keya;
+		var key = "snowstick-" + keya + ifid;
 		try {
 			if (isString)
 				localStorage.setItem(key, arya);
@@ -251,7 +248,7 @@ var SnowStick = function(){
 	**/
 
 	function retrieve(keya,isString) {
-		var key = "snowstick-" + keya;
+		var key = "snowstick-" + keya + ifid;
 		var arya = isString ? "" : [];
 		try {
 			if (isString)
