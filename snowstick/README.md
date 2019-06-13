@@ -25,26 +25,26 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ## Mode
 
-SnowStick has two main `modes`, *proof* and *read*, which can be set at the top of the SnowStick JavaScript, along with some minor configuration settings you can change:
+SnowStick has two main `modes`, *proof* and *read*; you should set one at the top of the SnowStick JavaScript (where you can also set some minor configuration options):
 
     var config = {
       mode: 'read',
 	  openBookmark: true,
       leafedMessage: ' (all children checked) ',
-	  bar: true
+	  bar: false
     };
 
 In *proof* mode:
 
 * the passage title and overall percentage read appear in a footer, and a note appears when the branch is completely proofed; you can change the note using the `leafedMessage` option
-* the percentage can be replaced with a gradient bar using the *bar* setting.
+* the percentage can be replaced with a gradient bar by setting the `bar` option to *true*
 * the passage is only marked proofed when the footer checkbox is checked off.
 * the links are restyled according to whether they're completely new, already proofed, or completed.
 
 In *read* mode:
 
 * the percentage read is the only added UI element (hover on it for details);
-* the percentage can be changed from text to a bar with the *bar* setting
+* the percentage can be changed from text to a bar by setting the `bar` option to *true*
 * the passage is automatically marked read when read.
 * the links are restyled according to whether they're completely new, previously read, or completed.
 
@@ -63,9 +63,9 @@ SnowStick stores its data in your browser's localStorage, so for it to work you 
 
 In certain cases, such as Twine 1 stories and other stories without IFID, SnowStick will need to be cleared between stories.  To read more than one such story at a time, use a different browser for each story (*e.g.,* Chrome vs. Brave).  (This is not a concern for Twine 2 stories that have distinct IFIDs.)
 
-## Building
+## ToDo
 
-There is no build process.
+It would be nice to validate the current read/leaf lists against the full passage list (in case passage names change), but that could slow things down and should perhaps be a separate mode.
 
 ## Versions
 
