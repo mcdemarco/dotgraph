@@ -7,6 +7,7 @@ var dotGraph = {};
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
+								clusterTags: [],
 								color: "length",
 								countWords: true,
 								display: true,
@@ -23,6 +24,8 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: true,
 								showNodeNames: false,
+								snowstick: false,
+								snowstickObj: {},
 								tooltips: true,
 								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
@@ -37,7 +40,9 @@ var dotGraph = {};
 									unreachable: "#FF6666",
 									untagged: "#FFFFFF",
 									trace: "#FF8000",
-									default: "#FFFFFF"
+									default: "#FFFFFF",
+									leafHue: 0.30,
+									readHue: 0.22
 								}
 							 };
 
@@ -54,7 +59,7 @@ var dotGraph = {};
 
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
-									startNodeName: "Start", 
+									startNodeName: "Start",
 									leaves: 0,
 									links: 0,
 									tightEnds: 0,
@@ -135,7 +140,8 @@ context.graph = (function() {
 		
 		if (config.cluster) {
 			buffer = buffer.concat(writeClusters(storyObj.tagObject));
-		} else if (config.color == "tag") {
+		}
+		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
 			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
@@ -200,6 +206,10 @@ context.graph = (function() {
 		return name;
 	}
 
+	function makeHSV(hue, sat, val) {
+		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
+	}
+
 	function passages() {
 		//Graph passages.
 		var subbuffer = [];
@@ -253,12 +263,16 @@ context.graph = (function() {
 		var styles = [];
 
 		var hue = 0;
+		var sat = 0;
+		var val = 1;
 		var pid = passage.pid;
 		var content = passage.content;
 		var tag = passage.theTag;
 
 		//Start with any special shape for the passage.
-		if (passage.trace) {
+		if (config.snowstick && passage.ssBookmark) {
+			styles.push("shape=note");
+		} else if (passage.trace) {
 			styles.push("shape=hexagon");
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.push("shape=doublecircle");
@@ -280,13 +294,32 @@ context.graph = (function() {
 		
 		//Calculate color.
 		if (config.color == "length") {
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
+			//Graphviz supports HSV, so use it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
+			//Solid real leaves for clarity.
+			hue = config.paletteExceptions.leafHue;
+			styles.push("fillcolor=\"" + makeHSV(hue,0.90,0.50) + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf) {
+			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.leafHue;
+			sat = passage.ssLeaf;
+			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+ 		} else if (config.snowstick && passage.ssRead) {
+			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.readHue;
+			sat = passage.ssRead;
+			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
  		} else if (passage.trace) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
 		} else if (pid == storyObj.startNode) {
@@ -331,7 +364,7 @@ context.graph = (function() {
 		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag)) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
 				clusters.push("subgraph cluster_" + clusterIndex + " {");
 				clusters.push("label=" + scrub(tag));
 				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
@@ -383,8 +416,9 @@ context.init = (function() {
 	//Private.
 	function activateForm() {
 		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
-		document.getElementById("omitTags").addEventListener('change', context.graph.convert, false);
-		document.getElementById("trace").addEventListener('change', context.graph.convert, false);
+		document.getElementById("clusterTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
@@ -427,6 +461,12 @@ context.passage = (function() {
 		passageObj.omit = hasOmittedTag(passageObj);
 		passageObj.trace = (config.trace && source.innerText.indexOf(config.trace) > -1);
 
+		//SnowStick.
+		if (config.snowstick) {
+			passageObj.ssLeaf = Math.max(config.snowstickObj.leaf.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.leaf.length,1);
+			passageObj.ssRead = Math.max(config.snowstickObj.read.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.read.length,1);
+			passageObj.ssBookmark = (config.snowstickObj.bookmark == passageObj.name);
+		}
 		return passageObj;
 	}
 
@@ -554,6 +594,18 @@ context.settings = (function () {
 	}
 
 	function load() {
+		//Check localStorage for snowstick.
+		try {
+			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
+			config.snowstickObj["read"] = localStorage.getItem("snowstick-read" + ifid) ? JSON.parse(localStorage.getItem("snowstick-read" + ifid)) : [];
+			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf" + ifid) ? JSON.parse(localStorage.getItem("snowstick-leaf" + ifid)) : [];
+			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + ifid) ? localStorage.getItem("snowstick-bookmark" + ifid) : "";
+			config.snowstick = (config.snowstickObj.leaf.length > 0 || config.snowstickObj.read.length > 0 || config.snowstickObj.bookmark.length > 0);
+		} catch (e) {
+			config.snowstick = false;
+			console.log("Error checking local storage for SnowStick data: " + e.description);
+		}
+
 		//Parse the StorySettings for dotgraph presets.
 		var StorySettings;
 		if (window.document.getElementById("storeArea"))
@@ -561,26 +613,30 @@ context.settings = (function () {
 		else 
 			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
 
-		if (!StorySettings || !StorySettings.innerText || StorySettings.innerText.indexOf("dotgraph:") < 0)
-			return;
-
-		var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
-		try {
-			dgSettings = JSON.parse(dgSettings);
-		} catch(e) {
-			console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
-			return;
+		if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
+			var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+			try {
+				dgSettings = JSON.parse(dgSettings);
+			} catch(e) {
+				console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
+				return;
+			}
+			_.each(dgSettings, function(value, key) {
+				//Do not reset snowstick to true if there's no data.
+				if (key != "snowstick" || !value) 
+					config[key] = value;
+			});
 		}
-		_.each(dgSettings, function(value, key) {
-			config[key] = value;
-		});
+		//Switch color to snowstick if there's data.
+		if (config.snowstick) 
+			config.color = "snow";
 	}
 
 	function parse() {
 		//Check for config changes.
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
 		config.cluster = document.getElementById("clusterCheckbox") ? document.getElementById("clusterCheckbox").checked : false;
-//rewriting to bw/length/tag
+		config.clusterTags =  document.getElementById("clusterTags") ? splitAndTrim(document.getElementById("clusterTags").value) : [];
 		config.color = document.querySelector("input[name='colorCheckbox']:checked") ? document.querySelector("input[name='colorCheckbox']:checked").value : "length";
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
@@ -611,16 +667,17 @@ context.settings = (function () {
 			<input type="checkbox" id="renumberCheckbox" name="renumberCheckbox" <%= (renumber ? "checked" : "") %>/><label for="renumberCheckbox">&nbsp;renumber from 1</label><br /> \
 			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="bw" <%= (color == "bw" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox0">Black & white</label> \
 			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="length" <%= (color == "length" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox1">Color by node length</label> \
-			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
+			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label> ' + 
+			(config.snowstick ? '<input type="radio" id="colorCheckbox3" name="colorCheckbox" value="snow" <%= (color == "snow" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox3" title="SnowStick">Color by read state</label>' : '') + '<br/> \
 			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
 			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
 			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;by&nbsp;special&nbsp;tags</label> (script,&nbsp;etc.)<br/> \
-			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
+			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="text" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(", ")%>"/><br/> \
 			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
 			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
 			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/> \
-			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags</label> \
+			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags:</label>&nbsp;<input type="text" id="clusterTags" placeholder="Separate tags with commas; leave blank for all tags." value="<%=clusterTags.join(", ")%>"/><br/> \
 			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /><br/> \
 			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
 			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR" <%= (rotation == "LR" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label> \

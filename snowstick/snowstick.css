@@ -1,0 +1,71 @@
+/* SnowStick 0.1
+   supporting CSS for snowstick
+   see snowstick.js for details
+ */
+
+/* the footer only appears in proofing mode, not in reading mode */
+
+#snowstick-footer {
+    background-color: lightsalmon;
+    position: bottom center;
+    width:100%;
+    padding-left:3px;
+}
+
+.snowstick-bar #snowstick-footer {
+  background-color: white;
+  background-image: linear-gradient(to right, lightsalmon, white 1%);
+}
+
+#snowstick-name {
+    font-weight:bold;
+    font-style: italic;
+}
+
+/* the percentage read always appears; 
+   remove it by setting display to none instead of inline-block */
+
+#snowstick-percent {
+    display: inline-block;
+    float: right;
+}
+
+.snowstick-read #snowstick-percent {
+    color: darkslategray;
+    padding:3px 6px;
+    border: 1px solid slategray;
+    border-radius: 3px;
+}
+
+.snowstick-bar.snowstick-proof #snowstick-percent {
+    width: auto!important;
+}
+
+.snowstick-bar.snowstick-read #snowstick-percent {
+    display:block;
+    position:fixed;
+    left:0;
+    bottom:0;
+    height:2px;
+    width:1%;
+    background-color: rgba(204,136,41,0.45);
+    border: 0;
+    border-radius: 0;
+}
+
+/* styling of completed leaf nodes and of read (or proofed) nodes */
+
+body.snowstick a.snowstick-read {
+    text-decoration-style: wavy;
+    text-decoration-line: underline;
+    text-decoration-color: #cc8929;
+    border: none;
+}
+
+body.snowstick a.snowstick-leaf,
+body.snowstick a.snowstick-read.snowstick-leaf {
+    text-decoration-style: solid;
+    text-decoration-line: line-through;
+    text-decoration-color: black;
+}
+
