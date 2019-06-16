@@ -690,13 +690,14 @@ context.settings = (function () {
 		//Check all toggleable sections against the settings and adapt.
 		if (section) {
 			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
+			document.getElementById("failSection").style.display = "none";
 		} else {
 			if (config.hideDot)
 				document.getElementById("dotSection").style.display = "none";
 			if (config.hideSettings)
 				document.getElementById("settingsSection").style.display = "none";
 			if (config.hideDot || config.hideSettings)
-				document.getElementById("failSection").style.disylay = "none";
+				document.getElementById("failSection").style.display = "none";
 		}
 	}
 
