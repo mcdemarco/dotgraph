@@ -93,6 +93,10 @@ context.graph = (function() {
 	};
 
 	function convert() {
+		//A change in the settings is what normally triggers (re)graphing, so (re)parse.
+		context.settings.parse();
+		context.story.parse();
+
 		//Get the dot graph source.
 		var output = dot();
 		
@@ -132,12 +136,8 @@ context.graph = (function() {
 
 	//Private
 	function dot() {
-		//(Re)parse the story and return the dot graph source.
+		//Return the dot graph source.
 		var buffer = [];
-
-		//A change in the settings is what normally triggers regraphing.
-		context.settings.parse();
-		context.story.parse();
 
 		buffer.push("digraph " + scrub(storyObj.title) + " {");
 		buffer.push("rankdir=" + config.rotation + "\r\n");
@@ -758,23 +758,40 @@ context.story = (function () {
 	};
 
 	function load() {
-		//Get the URL, parse it for story bits, write them to the page (overwriting the existing story if nec.)
+		//Load a story from a URL.
+		//Get the URL.
 		var URL = document.getElementById("loadStory").value;
 		if (!URL) return;
 		URL = corsProxy + URL;
 		var xhr = new XMLHttpRequest();
-		xhr.addEventListener("load", listener);
+		xhr.addEventListener("load", loadListener);
 		xhr.open('GET', URL);
 		xhr.responseType = 'document';
 		xhr.send();
-		function listener() {
-			var _story = this.response.querySelector('tw-storydata, div#storeArea');
-			if (!_story)
-				return;
-			document.querySelector('tw-storydata, div#storeArea').remove();
-			document.querySelector("body").append(_story);
-			context.graph.convert();
-		};
+	};
+
+	function loadListener() {
+		//Parse the response for story bits.
+		var _story = this.response.querySelector('tw-storydata, div#storeArea');
+		if (!_story)
+			return;
+
+		//Write story to the page (overwriting the existing story if necessary).
+		document.querySelector('tw-storydata, div#storeArea').remove();
+		document.querySelector("body").append(_story);
+
+		//Programmatically choose some appropriate settings.
+		config.scale = true;
+		if (_story.children && _story.children.length && _story.children.length < 15) {
+			config.showNodeNames = true;
+		} else {
+			config.showNodeNames = false;
+		}
+		//Rewrite the config because otherwise we'll read the old config.
+		context.settings.write();
+
+		//Graph.
+		context.graph.convert();
 	};
 
 	function parse() {
