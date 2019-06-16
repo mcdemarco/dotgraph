@@ -63,6 +63,8 @@ SnowStick stores its data in your browser's localStorage, so for it to work you 
 
 In certain cases, such as Twine 1 stories and other stories without IFID, SnowStick will need to be cleared between stories.  To read more than one such story at a time, use a different browser for each story (*e.g.,* Chrome vs. Brave).  (This is not a concern for Twine 2 stories that have distinct IFIDs.)
 
+The total passage count includes special and unreachable passages, so you may not hit 100%.
+
 ## ToDo
 
 It would be nice to validate the current read/leaf lists against the full passage list (in case passage names change), but that could slow things down and should perhaps be a separate mode.
