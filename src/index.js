@@ -4,6 +4,8 @@ var dotGraph = {};
 
 (function(context) {
 
+	var corsProxy = "https://cors-anywhere.herokuapp.com/";
+
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
@@ -14,6 +16,8 @@ var dotGraph = {};
 								dotExtension: "gv",
 								ends: true,
 								endTag: "end",
+								hideDot: false,
+								hideSettings: false,
 								lastTag: false,
 								omitSpecialPassages: true,
 								omitSpecialTags: true,
@@ -409,6 +413,7 @@ context.init = (function() {
 		//Onload function.
 		context.settings.load();
 		context.settings.write();
+		context.settings.toggle();
 		activateForm();
 		context.graph.convert();
 	}
@@ -419,10 +424,14 @@ context.init = (function() {
 		document.getElementById("clusterTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("loadStory").addEventListener('input', _.debounce(context.story.load,1000), false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
+
+		document.getElementById("dotHeader").addEventListener('click', function(){context.settings.toggle("dotSection");}, false);
+		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
 	}
 
 })();
@@ -578,6 +587,7 @@ context.settings = (function () {
 		load: load,
 		parse: parse,
 		scale: scale,
+		toggle: toggle,
 		write: write
 	};
 
@@ -676,6 +686,20 @@ context.settings = (function () {
 		}
 	}
 
+	function toggle(section) {
+		//Check all toggleable sections against the settings and adapt.
+		if (section) {
+			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
+		} else {
+			if (config.hideDot)
+				document.getElementById("dotSection").style.display = "none";
+			if (config.hideSettings)
+				document.getElementById("settingsSection").style.display = "none";
+			if (config.hideDot || config.hideSettings)
+				document.getElementById("failSection").style.disylay = "none";
+		}
+	}
+
 	function write() {
 		//Write the current config object as a settings panel.
 		var output = _.template('<input type="radio" id="nodeCheckbox0" name="nodeCheckbox" value="names" <%= (showNodeNames ? "checked" : "") %>/><label for="nodeCheckbox">&nbsp;Passage titles</label> \
@@ -728,7 +752,28 @@ context.settings = (function () {
 context.story = (function () {
 
 	return {
+		load: load,
 		parse: parse
+	};
+
+	function load() {
+		//Get the URL, parse it for story bits, write them to the page (overwriting the existing story if nec.)
+		var URL = document.getElementById("loadStory").value;
+		if (!URL) return;
+		URL = corsProxy + URL;
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener("load", listener);
+		xhr.open('GET', URL);
+		xhr.responseType = 'document';
+		xhr.send();
+		function listener() {
+			var _story = this.response.querySelector('tw-storydata, div#storeArea');
+			if (!_story)
+				return;
+			document.querySelector('tw-storydata, div#storeArea').remove();
+			document.querySelector("body").append(_story);
+			context.graph.convert();
+		};
 	};
 
 	function parse() {

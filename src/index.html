@@ -17,13 +17,18 @@
 </head>
 <body>
 	<h1>DotGraph Proofing Format</h1>
-	<div>
-		If rendering of the graph fails (i.e., you only see the dot source file) or you need the output in a different format, the dot source can also be rendered using the free desktop program <a href="http://www.graphviz.org/">Graphviz</a>, or rendered online at <a href="http://stamm-wilbrandt.de/GraphvizFiddle/">GraphvizFiddle</a> or <a href="http://www.webgraphviz.com">WebGraphviz</a>.
-	</div>
-	<h2>Graph</h2>
-	<div id="notes">
-		<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  Traced nodes are hex-shaped.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "end" tag changes the shape of "end" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
-	</div>
+
+	<section id="failSection">
+		<div>
+			If rendering of the graph fails (i.e., you only see the dot source file) or you need the output in a different format, the dot source can also be rendered using the free desktop program <a href="http://www.graphviz.org/">Graphviz</a>, or rendered online at <a href="http://stamm-wilbrandt.de/GraphvizFiddle/">GraphvizFiddle</a> or <a href="http://www.webgraphviz.com">WebGraphviz</a>.
+		</div>
+	</section>
+
+	<h2 id="settingsHeader">Graph</h2>
+	<section id="settingsSection">
+		<div id="notes">
+			<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  Traced nodes are hex-shaped.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "end" tag changes the shape of "end" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
+		</div>
 	<div>
 		<span id="stats" title="Twine">
 			<span id="nodeCount">0</span>&nbsp;nodes<span id="omitCount"></span>,
@@ -35,13 +40,19 @@
 		</form>
 		<button type="button" id="saveSvgButton">Save Image</button><br/>
 	</div>
+	</section>
+
 	<div id="graph" style="clear:both;"></div>
-	<h2>Dot Source</h2>
-	<button type="button" id="editButton">Redraw with edits</button>
-	<button type="button" id="saveDotButton">Save Source</button><br/>
+
+	<h2 id="dotHeader">Dot Source</h2>
+	<section id="dotSection">
+		<button type="button" id="editButton">Redraw with edits</button>
+		<button type="button" id="saveDotButton">Save Source</button>
+		<label for="loadStory"> Load new story from URL: </label><input type="text" id="loadStory" value=""/><br/>
 	
-	<textarea id="dotfile" style="width:100%;"></textarea>
-	
+		<textarea id="dotfile" style="width:100%;"></textarea>
+	</section>
+
 <%= passages %>
 
 <%= script %>
