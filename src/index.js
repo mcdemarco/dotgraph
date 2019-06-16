@@ -357,7 +357,12 @@ context.graph = (function() {
 		//Put names into a legal dot format.
 		if (name) {
 			// dangerously scrubbing non-ascii characters for graphviz bug
-			name = name.replace(/"/gm,"\\\"").replace(/[^\x00-\x7F]/g, "");
+			name = name.replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "");
+			//New emoji-squashing method:
+			name = _.map(name.split(""), function(chr) {
+				chrat = chr.charCodeAt(0);
+				return (chrat >= 32 && chrat <= 126 ? chr : "_");
+			}).join("");
 			// add literal quotes for names in all cases.
 			name = '"' + name + '"';
 		}
@@ -760,6 +765,11 @@ context.story = (function () {
 
 	function load(URL) {
 		//Load a story from a URL.
+		//Clear now for clarity.
+		if (document.querySelector('tw-storydata, div#storeArea'))
+			document.querySelector('tw-storydata, div#storeArea').remove();
+		document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + URL + "</tt> ...<p>"
+
 		//Get the URL.
 		if (!URL)
 			return;
@@ -778,7 +788,6 @@ context.story = (function () {
 			return;
 
 		//Write story to the page (overwriting the existing story if necessary).
-		document.querySelector('tw-storydata, div#storeArea').remove();
 		document.querySelector("body").append(_story);
 
 		//Programmatically choose some appropriate settings.
