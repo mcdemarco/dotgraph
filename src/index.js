@@ -51,7 +51,7 @@ var dotGraph = {};
 														"StoryColophon",
 														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
 														"PassageDone", "PassageFooter", "PassageHeader", "PassageReady",
-														"MenuOptions", "MenuShare"];
+														"MenuOptions", "MenuShare", "DotGraphSettings"];
 
 	var specialTagList = ["annotation", "debug-footer", "debug-header", "debug-startup", 
 												"footer", "haml", "header", "script", "startup", "stylesheet", 
@@ -606,28 +606,44 @@ context.settings = (function () {
 			console.log("Error checking local storage for SnowStick data: " + e.description);
 		}
 
-		//Parse the StorySettings for dotgraph presets.
-		var StorySettings;
+		var DotGraphSettings;
 		if (window.document.getElementById("storeArea"))
-			StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
+			DotGraphSettings = window.document.getElementById("storeArea").querySelector('div[tiddler="DotGraphSettings"]');
 		else 
-			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
+			DotGraphSettings = window.document.querySelector('tw-passagedata[name="DotGraphSettings"]');
 
-		if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
-			var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+		if (DotGraphSettings) {
+			//Don't require dotgraph: label or single-line layout but must still parse as a JSON object.
+			dgSettings = DotGraphSettings.innerText;
+		} else {
+			//Parse the StorySettings for dotgraph presets.  May fail mysteriously under Tweego 1.3.
+			var StorySettings, dgSettings;
+			if (window.document.getElementById("storeArea"))
+				StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
+			else 
+				StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
+	
+			if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
+				dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+			}
+		}
+
+		if (dgSettings) {
 			try {
 				dgSettings = JSON.parse(dgSettings);
 			} catch(e) {
 				console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
 				return;
 			}
-			_.each(dgSettings, function(value, key) {
-				//Do not reset snowstick to true if there's no data.
-				if (key != "snowstick" || !value) 
-					config[key] = value;
-			});
 		}
-		//Switch color to snowstick if there's data.
+
+		_.each(dgSettings, function(value, key) {
+			//Do not reset snowstick to true if there's no data.
+			if (key != "snowstick" || !value) 
+				config[key] = value;
+		});
+
+		//Lastly, switch color to snowstick if there's data and no 'false' setting.
 		if (config.snowstick) 
 			config.color = "snow";
 	}

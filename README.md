@@ -19,6 +19,10 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ## Versions
 
+### 2.2.0
+
+Add SnowStick (q.v.) and support for configuration using the DotGraphSettings passage, a safer and more flexible spot than StorySettings (which is still supported).
+
 ### 2.1.0
 
 Add a text tracing option and and support for configuration using the StorySettings passage.
