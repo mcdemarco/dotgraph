@@ -6,6 +6,8 @@ To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [ht
 
 To add DotGraph to Twine 1, create a new folder called `dotgraph` inside your targets folder, then download this file [https://mcdemarco.net/tools/scree/dotgraph/header.html](https://mcdemarco.net/tools/scree/dotgraph/header.html) and place it inside the `dotgraph` folder.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
 
+To use DotGraph to graph a published story, open an already-dotgrapphed story in a browser and add a question mark followed by the story's URL.  You can also do this by typing in the URL at the DotGraph site [here](https://mcdemarco.net/tools/scree/dotgraph/).
+
 ## Troubleshooting
 
 DotGraph may fail to draw the graph in some versions of Twine 2 due to issues with Chrome;
@@ -21,7 +23,7 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ### 2.2.0
 
-Add SnowStick (q.v.) and support for configuration using the DotGraphSettings passage, a safer and more flexible spot than StorySettings (which is still supported).
+Add SnowStick (a reading tracker integrated with DotGraph), support for configuration using the DotGraphSettings passage (a safer and more flexible spot than StorySettings, though the latter is still supported), and viewing another story by URL (a quicker way than by loading the story and this format into Twine).
 
 ### 2.1.0
 

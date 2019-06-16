@@ -357,10 +357,11 @@ context.graph = (function() {
 		//Put names into a legal dot format.
 		if (name) {
 			// dangerously scrubbing non-ascii characters for graphviz bug
-			name = name.replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "");
-			//New emoji-squashing method:
-			name = _.map(name.split(""), function(chr) {
+			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "");
+			//Another emoji-squashing method:
+			name = _.map(name.toString().split(""), function(chr) {
 				chrat = chr.charCodeAt(0);
+				// (chrat == 34 ? '\\\"' : chr)
 				return (chrat >= 32 && chrat <= 126 ? chr : "_");
 			}).join("");
 			// add literal quotes for names in all cases.
