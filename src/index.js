@@ -690,14 +690,11 @@ context.settings = (function () {
 		//Check all toggleable sections against the settings and adapt.
 		if (section) {
 			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
-			document.getElementById("failSection").style.display = "none";
 		} else {
 			if (config.hideDot)
 				document.getElementById("dotSection").style.display = "none";
 			if (config.hideSettings)
 				document.getElementById("settingsSection").style.display = "none";
-			if (config.hideDot || config.hideSettings)
-				document.getElementById("failSection").style.display = "none";
 		}
 	}
 
@@ -910,7 +907,7 @@ context.story = (function () {
 		}
 
 		document.getElementById("linkCount").innerHTML = storyObj.links;
-		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
+		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / Math.max(storyObj.passages.length,1)))/100;
 
 		document.getElementById("stats").setAttribute("title","Twine " + storyObj.twineVersion);
 	}
