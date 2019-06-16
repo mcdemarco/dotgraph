@@ -416,6 +416,11 @@ context.init = (function() {
 		context.settings.toggle();
 		activateForm();
 		context.graph.convert();
+
+		//Check for a passed-in URL.
+		if (window.location.search && window.location.search.split("?")[1].length > 0) {
+			context.story.load(window.location.search.split("?")[1]);
+		}
 	}
 
 	//Private.
@@ -424,7 +429,6 @@ context.init = (function() {
 		document.getElementById("clusterTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
-		document.getElementById("loadStory").addEventListener('input', _.debounce(context.story.load,1000), false);
 
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
@@ -754,11 +758,11 @@ context.story = (function () {
 		parse: parse
 	};
 
-	function load() {
+	function load(URL) {
 		//Load a story from a URL.
 		//Get the URL.
-		var URL = document.getElementById("loadStory").value;
-		if (!URL) return;
+		if (!URL)
+			return;
 		URL = corsProxy + URL;
 		var xhr = new XMLHttpRequest();
 		xhr.addEventListener("load", loadListener);
@@ -779,7 +783,7 @@ context.story = (function () {
 
 		//Programmatically choose some appropriate settings.
 		config.scale = true;
-		if (_story.children && _story.children.length && _story.children.length < 15) {
+		if (_story.children && _story.children.length && _story.children.length < 20) {
 			config.showNodeNames = true;
 		} else {
 			config.showNodeNames = false;
