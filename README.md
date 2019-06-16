@@ -13,6 +13,10 @@ in that case it will still give you the text of the dot source file, as well as 
 
 DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
 
+## SnowStick
+
+SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman-based story formats in order to track your reading/proofing progress and graph it with DotGraph.  It can also be used without DotGraph.  See [its separate README](snowstick/README.md) for more details.
+
 ## Versions
 
 ### 2.1.0
