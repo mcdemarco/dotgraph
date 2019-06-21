@@ -16,6 +16,7 @@ var dotGraph = {};
 								dotExtension: "gv",
 								ends: true,
 								endTag: "end",
+								engine: "dot",
 								hideDot: false,
 								hideSettings: false,
 								lastTag: false,
@@ -77,6 +78,8 @@ var dotGraph = {};
 									twineVersion: 0
 								 };
 
+	var viz = new Viz();
+
 //graph
 //init
 //passage
@@ -105,9 +108,7 @@ context.graph = (function() {
 		dotTextarea.value = output;
 		dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
 		
-		//Do the conversion and write the svg to the page.
-		document.getElementById("graph").innerHTML = Viz(output,"svg");
-		context.settings.scale();
+		render(output);
 	}
 			
 	function edit() {
@@ -115,9 +116,7 @@ context.graph = (function() {
 		//in that case, read the dot file from the browser and render it.
 		var editedOutput = document.getElementById("dotfile").value;
 
-		//Needs error handling?
-		document.getElementById("graph").innerHTML = Viz(editedOutput,"svg");
-		context.settings.scale();
+		render(editedOutput);
 	}
 
 	function saveDot() {
@@ -129,9 +128,18 @@ context.graph = (function() {
 	function saveSvg() {
 		//Having trouble reading the existing svg off the page, so regenerate it.
 		var output = document.getElementById("dotfile").value;
-		var preblob = Viz(output,"svg").replace("no","yes");
-		var blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
-		filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
+		viz.renderSVGElement(output)
+			.then(function(result){
+				var preblob = result.toString().replace("no","yes");
+				var blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
+				filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
+			})
+			.catch(function(error){
+				// Create a new Viz instance
+				viz = new Viz();
+				// Possibly display the error
+				console.log(error);
+			});
  	}
 
 	//Private
@@ -263,6 +271,24 @@ context.graph = (function() {
 		return result;
 	}
 
+	function render(output) {
+		//Clear the area!
+		document.getElementById("graph").innerHTML = "";
+
+		//Do the conversion and write the svg to the page.
+		viz.renderSVGElement(output, {engine: config.engine})
+			.then(function(result){
+				document.getElementById("graph").appendChild(result);
+				context.settings.scale();
+			})
+			.catch(function(error){
+				// Create a new Viz instance
+				viz = new Viz();
+				// Possibly display the error
+				console.log(error);
+			});
+	}
+
 	function stylePassage(passage, label) {
 		var styles = [];
 
@@ -356,14 +382,18 @@ context.graph = (function() {
 	function scrub(name) {
 		//Put names into a legal dot format.
 		if (name) {
-			// dangerously scrubbing non-ascii characters for graphviz bug
-			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "");
-			//Another emoji-squashing method:
+			// dangerously scrubbing non-ascii characters for graphviz bug.
+			// the long regex is for emoji, from https://thekevinscott.com/emojis-in-javascript/
+			//Try new viz with noscrub, just the quote escaping.
+			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "_").replace(/[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c\ude32-\ude3a]|[\ud83c\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff]/g, "_");
+			/* 
+				//Another emoji-squashing method:
 			name = _.map(name.toString().split(""), function(chr) {
 				chrat = chr.charCodeAt(0);
 				// (chrat == 34 ? '\\\"' : chr)
 				return (chrat >= 32 && chrat <= 126 ? chr : "_");
 			}).join("");
+			*/
 			// add literal quotes for names in all cases.
 			name = '"' + name + '"';
 		}
@@ -676,6 +706,7 @@ context.settings = (function () {
 		config.color = document.querySelector("input[name='colorCheckbox']:checked") ? document.querySelector("input[name='colorCheckbox']:checked").value : "length";
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
+		config.engine = document.querySelector("input[name='engineCheckbox']:checked") ? document.querySelector("input[name='engineCheckbox']:checked").value : "dot";
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
 		config.omitSpecialTags = document.getElementById("specialTagCheckbox") ? document.getElementById("specialTagCheckbox").checked : false;
 		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
@@ -727,6 +758,12 @@ context.settings = (function () {
 			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/> \
 			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags:</label>&nbsp;<input type="text" id="clusterTags" placeholder="Separate tags with commas; leave blank for all tags." value="<%=clusterTags.join(", ")%>"/><br/> \
 			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /><br/> \
+			Engine: <input type="radio" id="engineCheckbox0" name="engineCheckbox" value="circo" <%= (engine == "circo" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox0">circo</label> \
+			<input type="radio" id="engineCheckbox1" name="engineCheckbox" value="dot" <%= (engine == "dot" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox1">dot</label> \
+			<input type="radio" id="engineCheckbox2" name="engineCheckbox" value="fdp" <%= (engine == "fdp" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox2">fdp</label> \
+			<input type="radio" id="engineCheckbox3" name="engineCheckbox" value="neato" <%= (engine == "neato" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox3">neato</label> \
+			<input type="radio" id="engineCheckbox4" name="engineCheckbox" value="osage" <%= (engine == "osage" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox4">osage</label> \
+			<input type="radio" id="engineCheckbox5" name="engineCheckbox" value="twopi" <%= (engine == "twopi" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox5">twopi</label><br/> \
 			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
 			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR" <%= (rotation == "LR" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label> \
 			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT" <%= (rotation == "BT" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox2" title="Bottom to top">&uarr;</label> \
