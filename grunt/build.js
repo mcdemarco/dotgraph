@@ -42,7 +42,7 @@ module.exports = function(grunt) {
 		var data = {
 			name: '{{STORY_NAME}}',
 			passages: '{{STORY_DATA}}',
-			vizScript: '<script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>',
+			vizScript: '<script src="https://mcdemarco.net/tools/viz/viz.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/full.render.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -55,7 +55,7 @@ module.exports = function(grunt) {
 		var data = {
 			name: '{{STORY_NAME}}',
 			passages: '{{STORY_DATA}}',
-			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script>',
+			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script><script>'  + grunt.file.read('lib/full.render.js') + '</script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -68,7 +68,7 @@ module.exports = function(grunt) {
 		var data = {
 			name: 'DotGraph',
 			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
-			vizScript: '<script src="https://mcdemarco.net/tools/scree/dotgraph/viz.js" type="text/javascript"></script>',
+			vizScript: '<script src="https://mcdemarco.net/tools/viz/viz.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/full.render.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -81,7 +81,7 @@ module.exports = function(grunt) {
 		var data = {
 			name: 'DotGraph',
 			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
-			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script>',
+			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script><script>'  + grunt.file.read('lib/full.render.js') + '</script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
