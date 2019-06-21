@@ -23,7 +23,7 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ### 2.2.0
 
-Add SnowStick (a reading tracker integrated with DotGraph), support for configuration using the DotGraphSettings passage (a safer and more flexible spot than StorySettings, though the latter is still supported), and viewing another story by URL (a quicker way than by loading the story and this format into Twine).
+Add SnowStick (a reading tracker integrated with DotGraph), support for configuration using the DotGraphSettings passage (a safer and more flexible spot than StorySettings, though the latter is still supported), viewing another story by URL (a quicker way than by loading the story and this format into Twine), and Graphviz engine options (after updating to the latest [viz.js](http://viz-js.com)).
 
 ### 2.1.0
 

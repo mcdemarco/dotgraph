@@ -92,7 +92,8 @@ context.graph = (function() {
 		convert: convert,
 		edit: edit,
 		saveDot: saveDot,
-		saveSvg: saveSvg
+		saveSvg: saveSvg,
+		scale: scale
 	};
 
 	function convert() {
@@ -126,21 +127,19 @@ context.graph = (function() {
  	}
 
 	function saveSvg() {
-		//Having trouble reading the existing svg off the page, so regenerate it.
-		var output = document.getElementById("dotfile").value;
-		viz.renderSVGElement(output)
-			.then(function(result){
-				var preblob = result.toString().replace("no","yes");
-				var blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
-				filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
-			})
-			.catch(function(error){
-				// Create a new Viz instance
-				viz = new Viz();
-				// Possibly display the error
-				console.log(error);
-			});
+		//Read the existing svg off the page.
+		var svgTxt = document.getElementById("graph").firstChild.outerHTML;
+		var blob = new Blob([svgTxt], {type: "image/svg+xml;charset=utf-8"});
+		filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
  	}
+
+	function scale() {
+		var svgElt = document.getElementsByTagName("svg")[0];
+		if (config.scale) {
+			svgElt.setAttribute("width","100%");
+			svgElt.removeAttribute("height");
+		}
+	}
 
 	//Private
 	function dot() {
@@ -279,7 +278,7 @@ context.graph = (function() {
 		viz.renderSVGElement(output, {engine: config.engine})
 			.then(function(result){
 				document.getElementById("graph").appendChild(result);
-				context.settings.scale();
+				context.graph.scale();
 			})
 			.catch(function(error){
 				// Create a new Viz instance
@@ -626,7 +625,6 @@ context.settings = (function () {
 		isOmittedTag: isOmittedTag,
 		load: load,
 		parse: parse,
-		scale: scale,
 		toggle: toggle,
 		write: write
 	};
@@ -717,14 +715,6 @@ context.settings = (function () {
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
 		config.trace = document.getElementById("trace") ? trim(document.getElementById("trace").value) : "";
-	}
-			
-	function scale() {
-		if (config.scale) {
-			var svgElt = document.getElementsByTagName("svg")[0];
-			svgElt.setAttribute("width","100%");
-			svgElt.removeAttribute("height");
-		}
 	}
 
 	function toggle(section) {
