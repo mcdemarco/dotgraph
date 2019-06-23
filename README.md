@@ -16,7 +16,7 @@ The cluster and color by tag options use the first tag on each passage unless *U
 
 Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.
 
-The layout <b>engine</b> options change the graph style; some options are slower than the default ("dot").
+The layout <b>engine</b> options change the graph style; some options are slower than the default ("dot").  Some options are only supported under the "dot" engine, such as clustering by tag and choosing the graph direction (the arrows).
 
 The image format is SVG.
 
