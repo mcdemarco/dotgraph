@@ -11,7 +11,7 @@
  #stats {font-style:italic;text-align:center;}
  input#omitTags, input#clusterTags {width:30%;}
  label {white-space:nowrap;}
- div#notes {font-size:smaller;width:45%;padding-top:20px;float:right;}
+ div#notes {font-size:smaller;width:40%;padding-top:10px;float:right;}
  h2 {float:left;padding-right:3em;}
  section {clear:both;}
  textarea {min-height:15em;}
@@ -32,7 +32,9 @@
 	<h2 id="settingsHeader" style="text-decoration:underline;">Settings</h2>
 	<section id="settingsSection">
 		<div id="notes">
-			<b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  Traced nodes are hex-shaped.  When color is on, nodes that are linked but do not exist are colored white.  When color by length is on, all other nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.<br/>  The cluster and color by tag options use the first tag on each passage unless Use last tag is checked; optionally detected special tags are ignored in this ordering.  Optional detection of an "end" tag changes the shape of "end" passages to an egg (and puts diagonals on loose ends and disconnected nodes).  Optional detection of a "checkpoint" tag changes the shape of checkpoint passages to a diamond.  The omit by tag(s) option omits the passage regardless of tag order.<br/>  Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.  The image format is SVG.
+						<p><b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color by length is on, all real nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.</p>
+						<p>Stray or misplaced nodes can result from the omit tags setting, from duplicate passage names, scripted passage transitions, or other linking issues.</p>
+						<p>The layout <b>engine</b> options change the graph style; some options are slower than the default ("dot").  The image format is SVG.  For more information, see <a href="http://mcdemarco.net/tools/scree/dotgraph/">the website</a> or <a href="https://bitbucket.org/mcdemarco/dotgraph/src/default/README.md">the README</a>.</p>
 		</div>
 	<div>
 		<form id="settingsForm">
