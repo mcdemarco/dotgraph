@@ -19,6 +19,7 @@ var dotGraph = {};
 								engine: "dot",
 								hideDot: false,
 								hideSettings: false,
+								increment: 0.2,
 								lastTag: false,
 								omitSpecialPassages: true,
 								omitSpecialTags: true,
@@ -133,11 +134,30 @@ context.graph = (function() {
 		filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
  	}
 
-	function scale() {
+	function scale(by) {
+		console.log(by);
 		var svgElt = document.getElementsByTagName("svg")[0];
+		svgElt.removeAttribute("height");
+
+		//parseInt or parseFloat because all values are strings with "%" or "pt" attached.
 		if (config.scale) {
-			svgElt.setAttribute("width","100%");
-			svgElt.removeAttribute("height");
+			//set size or apply increment as a percentage
+			if (typeof by == "undefined")
+				svgElt.setAttribute("width","100%");
+			else 
+				svgElt.setAttribute("width", parseInt(svgElt.getAttribute("width"),10) + (by * 100) + "%");
+		} else {
+			//need to parse the viewbox for the natural size.
+			var viewBox = svgElt.getAttribute("viewBox").split(" ");
+			// viewBox[2] is width, viewBox[3] is height, in points.
+
+			//set size or apply increment as a point value
+			if (typeof by == "undefined") {
+				//The un-fit-to-page case.  Not needed for initial sizing, but for changes.
+				svgElt.setAttribute("width",viewBox[2] + "pt");
+			} else {
+				svgElt.setAttribute("width",parseFloat(svgElt.getAttribute("width")) + (parseFloat(viewBox[2]) * by) + "pt");
+			}
 		}
 	}
 
@@ -465,9 +485,14 @@ context.init = (function() {
 		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 
+		//Not actually part of the settings form.
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
+
+		document.getElementById("scaleCheckbox").addEventListener('change', function(){context.settings.scale();}, false);
+		document.getElementById("scaleUpButton").addEventListener('click', function(){context.graph.scale(config.increment);}, false);
+		document.getElementById("scaleDownButton").addEventListener('click', function(){context.graph.scale(-config.increment);}, false);
 
 		document.getElementById("dotHeader").addEventListener('click', function(){context.settings.toggle("dotSection");}, false);
 		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
@@ -625,6 +650,7 @@ context.settings = (function () {
 		isOmittedTag: isOmittedTag,
 		load: load,
 		parse: parse,
+		scale: scale,
 		toggle: toggle,
 		write: write
 	};
@@ -717,6 +743,12 @@ context.settings = (function () {
 		config.trace = document.getElementById("trace") ? trim(document.getElementById("trace").value) : "";
 	}
 
+	function scale() {
+		//Rescaling isn't handled like other settings.
+		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
+		context.graph.scale();
+	}
+
 	function toggle(section) {
 		//Check all toggleable sections against the settings and adapt.
 		if (section) {
@@ -747,8 +779,7 @@ context.settings = (function () {
 			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox" title="This changes the shape of end passages to an egg and puts diagonals on loose ends and disconnected nodes.">Detect end tags</label> \
 			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox" title="The cluster and color by tag options normally use the first tag on each passage.">Use last tag</label><br/> \
 			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags:</label>&nbsp;<input type="text" id="clusterTags" placeholder="Separate tags with commas; leave blank for all tags." value="<%=clusterTags.join(", ")%>"/><br/> \
-			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace" title="Traced nodes are hex-shaped.">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /> \
-			<input type="checkbox" id="scaleCheckbox" <%= (scale ? "checked" : "") %> />&nbsp;<label for="scaleCheckbox">Scale to fit page</label><br/> \
+			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace" title="Traced nodes are hex-shaped.">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /> <br/> \
 			<input type="radio" id="engineCheckbox0" name="engineCheckbox" value="circo" <%= (engine == "circo" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox0">circo</label> \
 			<input type="radio" id="engineCheckbox1" name="engineCheckbox" value="dot" <%= (engine == "dot" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox1">dot</label> \
 			(<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
@@ -760,6 +791,7 @@ context.settings = (function () {
 			<input type="radio" id="engineCheckbox4" name="engineCheckbox" value="osage" <%= (engine == "osage" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox4">osage</label> \
 			<input type="radio" id="engineCheckbox5" name="engineCheckbox" value="twopi" <%= (engine == "twopi" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox5">twopi</label><br/>');
 		document.getElementById("settingsForm").innerHTML = output(config);
+		document.getElementById("scaleCheckbox").checked = config.scale;
 	}
 
 	function splitAndTrim(tagList) {

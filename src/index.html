@@ -15,7 +15,9 @@
  h2 {float:left;padding-right:3em;}
  section {clear:both;}
  textarea {min-height:15em;}
+ #graphSection {text-align:center;}
  #saveSvgButton {float:left;}
+ #scaleUpButton, #scaleDownButton {font-weight:bold;}
 </style>
 <%= vizScript %>
 </head>
@@ -45,6 +47,9 @@
 	<h2 id="graphHeader">Graph</h2>
 	<section id="graphSection">
 		<button type="button" id="saveSvgButton">Save Image</button>
+		<input type="checkbox" id="scaleCheckbox" />&nbsp;<label for="scaleCheckbox">Scale to fit page</label>
+		<button type="button" id="scaleDownButton">&ndash;</button>
+		<button type="button" id="scaleUpButton">+</button>
 		<div id="graph"></div>
 		<hr style="clear:both;"/>
 	</section>
