@@ -6,7 +6,8 @@ To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [ht
 
 To add DotGraph to Twine 1, create a new folder called `dotgraph` inside your targets folder, then download this file [https://mcdemarco.net/tools/scree/dotgraph/header.html](https://mcdemarco.net/tools/scree/dotgraph/header.html) and place it inside the `dotgraph` folder.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
 
-To use DotGraph to graph a published story, open an already-dotgrapphed story in a browser and add a question mark followed by the story's URL.  You can also do this by typing in the URL at the DotGraph site [here](https://mcdemarco.net/tools/scree/dotgraph/).
+To use DotGraph to graph a published story, open an already-dotgrapphed story in a browser and add a question mark followed by the story's URL.
+You can also do this by typing in the URL at the DotGraph site [here](https://mcdemarco.net/tools/scree/dotgraph/#DotGraph.as.a.Service).
 
 ## Notes
 
@@ -16,7 +17,7 @@ The cluster and color by tag options use the first tag on each passage unless *U
 
 Stray or misplaced nodes can result from the omit tags setting, or from duplicate passage names or other linking issues.
 
-The layout <b>engine</b> options change the graph style; some options are slower than the default ("dot").  Some options are only supported under the "dot" engine, such as clustering by tag and choosing the graph direction (the arrows).
+The layout engine options change the graph style; some options are slower than the default ("dot").  Some options are only supported under the "dot" engine, such as clustering by tag and choosing the graph direction (the arrows).  You can find a [brief description (PDF)](https://graphviz.gitlab.io/_pages/pdf/dot.1.pdf) of the engines and fuller documentation for each one on GraphViz's [documentation page](https://graphviz.org/documentation/).
 
 The image format is SVG.
 
@@ -35,7 +36,7 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ### 2.2.0
 
-Add SnowStick (a reading tracker integrated with DotGraph), support for configuration using the DotGraphSettings passage (a safer and more flexible spot than StorySettings, though the latter is still supported), viewing another story by URL (a quicker way than by loading the story and this format into Twine), and Graphviz engine options (after updating to the latest [viz.js](http://viz-js.com)).
+Add SnowStick (a reading tracker integrated with DotGraph), support for configuration using the DotGraphSettings passage (a safer and more flexible spot than StorySettings, though the latter is still supported), viewing another story by URL (a quicker way than by loading the story and this format into Twine), and Graphviz engine options (after updating to the latest [viz.js](http://viz-js.com) to fix some special character issues).
 
 ### 2.1.0
 
