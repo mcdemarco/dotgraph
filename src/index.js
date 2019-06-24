@@ -362,6 +362,8 @@ context.graph = (function() {
 			sat = passage.ssLeaf;
 			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
 			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+ 		} else if (passage.trace) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
  		} else if (config.snowstick && passage.ssRead) {
 			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
 			//Use it to vary both saturation and value.
@@ -369,8 +371,6 @@ context.graph = (function() {
 			sat = passage.ssRead;
 			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
 			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
- 		} else if (passage.trace) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
 		} else if (pid == storyObj.startNode) {
 			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
