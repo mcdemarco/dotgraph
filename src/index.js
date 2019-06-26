@@ -4,7 +4,7 @@ var dotGraph = {};
 
 (function(context) {
 
-	var corsProxy = "https://cors-anywhere.herokuapp.com/";
+	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
 
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
@@ -823,29 +823,60 @@ context.story = (function () {
 		parse: parse
 	};
 
-	function load(URL) {
+	function load(theURL,retry) {
 		//Load a story from a URL.
 		//Clear now for clarity.
 		if (document.querySelector('tw-storydata, div#storeArea'))
 			document.querySelector('tw-storydata, div#storeArea').remove();
-		document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + URL + "</tt> ...<p>"
+		if (!retry)
+			document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + theURL + "</tt> ...<span id='loadingResult' style='color:tomato;'></span><p>";
 
 		//Get the URL.
-		if (!URL)
+		if (!theURL)
 			return;
-		URL = corsProxy + URL;
+		theURL = corsProxy + theURL;
 		var xhr = new XMLHttpRequest();
-		xhr.addEventListener("load", loadListener);
-		xhr.open('GET', URL);
+		xhr.onreadystatechange = loadListener;
+		xhr.open('GET', theURL);
 		xhr.responseType = 'document';
 		xhr.send();
 	};
 
 	function loadListener() {
 		//Parse the response for story bits.
-		var _story = this.response.querySelector('tw-storydata, div#storeArea');
-		if (!_story)
+		if (this.readyState != 4 || (this.status != 200 && this.status != 304)) {
+			document.getElementById('loadingResult').innerHTML = " not found.";
 			return;
+		}
+
+		var _story = this.response.querySelector('tw-storydata, div#storeArea');
+		if (!_story) {
+			var newURL;
+			//Most browsers support responseURL so didn't bother to bind the original URL.
+			var oldURL = this.responseURL ? this.responseURL : "";
+			console.log(oldURL);
+			if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
+				//Fix philome.la links.
+				newURL = oldURL + "/play";
+			} else if (oldURL.indexOf("itch.io") > 0) {
+				//If itch, try to break out of the frame.
+				newURL = this.response.querySelector('iframe[src]').getAttribute('src');
+				//Itch seems to be all https, and the src to lack a protocol.
+				if (newURL.indexOf("http") < 0)
+					newURL = "https:" + newURL;
+			} /* else if (oldURL.indexOf("ifdb.tads.org") > 0) {
+				//also blocking the cors server.
+				newURL = this.response.querySelector('div#links-div a'); 
+				if (newURL)
+				newURL = newURL.getAttribute('href');
+				} */
+			
+			if (newURL)
+				context.story.load(newURL,true);
+			else
+				document.getElementById('loadingResult').innerHTML = " failed.";
+			return;
+		}
 
 		//Write story to the page (overwriting the existing story if necessary).
 		document.querySelector("body").append(_story);
@@ -888,9 +919,9 @@ context.story = (function () {
 			storyObj.title = storyTwine2.getAttribute("name") ? storyTwine2.getAttribute("name") : "Untitled";
 			storyObj.startNode = storyTwine2.getAttribute("startnode") ? storyTwine2.getAttribute("startnode") : 1;
 		} else {
-			//Not clear this can occur.
-			storyObj.title = 1;
-			storyObj.startNode = 1;
+			//This can occur with a missing story (as in DGaaS) or a failed load.
+			storyObj.title = "Story not found";
+			storyObj.startNode = "";
 		}
 
 		if (storyTwine1)
