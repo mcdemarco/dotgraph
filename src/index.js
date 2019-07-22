@@ -5,6 +5,7 @@ var dotGraph = {};
 (function(context) {
 
 	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
+	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
@@ -135,7 +136,6 @@ context.graph = (function() {
  	}
 
 	function scale(by) {
-		console.log(by);
 		var svgElt = document.getElementsByTagName("svg")[0];
 		svgElt.removeAttribute("height");
 
@@ -831,10 +831,14 @@ context.story = (function () {
 		if (!retry)
 			document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + theURL + "</tt> ...<span id='loadingResult' style='color:tomato;'></span><p>";
 
-		//Get the URL.
+		//Get the URL.  Some sites might not need the proxy, and in general it would be better to fail over them.
 		if (!theURL)
 			return;
-		theURL = corsProxy + theURL;
+		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0) 
+			theURL = ttCorsProxy + theURL;
+		else
+			theURL = corsProxy + theURL;
+
 		var xhr = new XMLHttpRequest();
 		xhr.onreadystatechange = loadListener;
 		xhr.open('GET', theURL);
@@ -853,9 +857,14 @@ context.story = (function () {
 		if (!_story) {
 			var newURL;
 			//Most browsers support responseURL so didn't bother to bind the original URL.
-			var oldURL = this.responseURL ? this.responseURL : "";
-			console.log(oldURL);
-			if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
+			var oldURL = this.response.url ? this.response.url : (this.responseURL ?  this.responseURL : "");
+			var _meta = this.response.querySelector('meta[http-equiv=refresh]');
+			if (_meta) {
+				//Read the refresh manually.
+				var _temp = this.response.querySelector('meta[http-equiv=refresh]').getAttribute('content');
+				if (_temp)
+					newURL = _temp.split(";URL=")[1];
+			} else if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
 				//Fix philome.la links.
 				newURL = oldURL + "/play";
 			} else if (oldURL.indexOf("itch.io") > 0) {
@@ -864,12 +873,12 @@ context.story = (function () {
 				//Itch seems to be all https, and the src to lack a protocol.
 				if (newURL.indexOf("http") < 0)
 					newURL = "https:" + newURL;
-			} /* else if (oldURL.indexOf("ifdb.tads.org") > 0) {
+			} else if (oldURL.indexOf("ifdb.tads.org") > 0) {
 				//also blocking the cors server.
 				newURL = this.response.querySelector('div#links-div a'); 
 				if (newURL)
-				newURL = newURL.getAttribute('href');
-				} */
+					newURL = newURL.getAttribute('href');
+			}
 			
 			if (newURL)
 				context.story.load(newURL,true);
