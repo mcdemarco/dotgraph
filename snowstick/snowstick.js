@@ -38,7 +38,8 @@ var SnowStick = function(){
     mode: 'read',
 		openBookmark: true,
 		leafedMessage: ' (all children checked) ',
-		bar: false
+		tags: true,
+		bar: true
   };
 
 	var previous = "";
@@ -108,8 +109,11 @@ var SnowStick = function(){
 					var newLength = SnowStick.pusher("read",window.passage.name,true);
 					var pcnt = percent(newLength);
 
-					//Put the passage id and title in a tooltip.
-					var title = window.passage.id + ": " + window.passage.name + (config.bar ? " (" + pcnt + ")" : "");
+					//Put the passage id, title, and optional tags in a tooltip.
+					var title = window.passage.id + ": " + 
+							window.passage.name + 
+							(config.tags ? " [" + window.passage.tags + "]" : "") +
+							(config.bar ? " (" + pcnt + ")" : "");
 					$("#snowstick-percent").attr("title",title);
 
 					//Style the links.  Expensive.
@@ -144,8 +148,8 @@ var SnowStick = function(){
 		} else {//mode == 'proof'
 			$(document).on('showpassage:after', function(event, passage) {
 				if (window.passage.name) {
-					//Write the name to the footer and the id to its tooltip, in case someone cares.
-					$("#snowstick-name").html(window.passage.name).attr("title",window.passage.id);
+					//Write the name and optional tags to the footer and the id to its tooltip, in case someone cares.
+					$("#snowstick-name").html(window.passage.name + (config.tags ?  " [" + window.passage.tags + "]" : "")).attr("title",window.passage.id);
 
 					//Show the checkbox with its value.
 					$("#snowstick-check").prop("checked",window.passage.proofed);
