@@ -31,19 +31,20 @@ SnowStick has two main `modes`, *proof* and *read*; you should set one at the to
       mode: 'read',
 	  openBookmark: true,
       leafedMessage: ' (all children checked) ',
+	  tags: false,
 	  bar: false
     };
 
 In *proof* mode:
 
-* the passage title and overall percentage read appear in a footer, and a note appears when the branch is completely proofed; you can change the note using the `leafedMessage` option
+* the passage title, overall percentage read, and (optionally) tags appear in a footer, and a note appears when the branch is completely proofed; you can change the note using the `leafedMessage` option
 * the percentage can be replaced with a gradient bar by setting the `bar` option to *true*
 * the passage is only marked proofed when the footer checkbox is checked off.
 * the links are restyled according to whether they're completely new, already proofed, or completed.
 
 In *read* mode:
 
-* the percentage read is the only added UI element (hover on it for details);
+* the percentage read is the only added UI element (hover on it for details, including optional tags);
 * the percentage can be changed from text to a bar by setting the `bar` option to *true*
 * the passage is automatically marked read when read.
 * the links are restyled according to whether they're completely new, previously read, or completed.
