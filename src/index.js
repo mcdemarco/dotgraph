@@ -53,7 +53,7 @@ var dotGraph = {};
 								}
 							 };
 
-	var specialPassageList = ["StoryTitle", "StoryIncludes",
+	var specialPassageList = ["StoryTitle", "StoryIncludes", "StoryData",
 														"StoryAuthor", "StorySubtitle", "StoryMenu", "StorySettings",
 														"StoryColophon",
 														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
@@ -299,6 +299,10 @@ context.graph = (function() {
 			.then(function(result){
 				document.getElementById("graph").appendChild(result);
 				context.graph.scale();
+				if (config.snowstick) {
+					//Activate the nodes for rebookmarking.
+					document.querySelectorAll("#graph g.node text").forEach(function(elt){elt.addEventListener('click', context.settings.bookmark, false);});
+				}
 			})
 			.catch(function(error){
 				// Create a new Viz instance
@@ -647,12 +651,27 @@ context.passage = (function() {
 context.settings = (function () {
 
 	return {
+		bookmark: bookmark,
 		isOmittedTag: isOmittedTag,
 		load: load,
 		parse: parse,
 		scale: scale,
 		toggle: toggle,
 		write: write
+	};
+
+	function bookmark(e) {
+		var newMark = e.target.innerHTML;
+		if (newMark) {
+			//Set the bookmark.
+			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
+			try {
+				localStorage.setItem("snowstick-bookmark" + ifid, newMark);
+				config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + ifid) ? localStorage.getItem("snowstick-bookmark" + ifid) : "";
+			} catch (e) {
+				console.log("Bookmarking failed.");
+			}
+		}
 	};
 
 	function isOmittedTag(tag) {

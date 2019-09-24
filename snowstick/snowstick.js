@@ -9,7 +9,7 @@
  * put this js into your story javascript, and the CSS in snowstick.css into your story stylesheet.
  */
 
-var SnowStick = function(){
+window.SnowStick = function(){
 
 	/* Configuration options: 
 	 *
@@ -195,7 +195,7 @@ var SnowStick = function(){
 			//Reset this to avoid mistakes from going back.
 			SnowStick.store("bookmark","",true);
 		});
-		$(document).on('hidepassage hide.sm.passage', function(event, passage) {
+		$(document).on('hidepassage hide.sm.passage leavepassage', function(event, passage) {
 			//We store the previous passage name to check for simple loops and to bookmark.
 			if (window.passage.name)
 				SnowStick.store("bookmark",window.passage.name,true);
@@ -325,5 +325,5 @@ var SnowStick = function(){
   };
 }();
 
-SnowStick.init();
+window.SnowStick.init();
 
