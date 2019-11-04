@@ -109,7 +109,7 @@ context.graph = (function() {
 		//Write the dot graph text to the page.
 		var dotTextarea = document.getElementById("dotfile");
 		dotTextarea.value = output;
-		dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
+		//dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
 		
 		render(output);
 	}
@@ -965,7 +965,7 @@ context.story = (function () {
 		storyObj.tagObject = {};
 		storyObj.tags = [];
 		storyObj.targets = {};
-		storyObj.reachable = storyObj.reachable.concat(specialPassageList);
+		//storyObj.reachable = storyObj.reachable.concat(specialPassageList);
 
 		for (p = 0; p < storyObj.passages.length; p++) {
 
@@ -1004,8 +1004,9 @@ context.story = (function () {
 
 		};
 
-		storyObj.reachable = _.uniq(storyObj.reachable); 
-		storyObj.unreachable = _.difference(_.pluck(storyObj.passages,"name"),storyObj.reachable);
+		storyObj.unreachable = _.difference(storyObj.reachable, _.uniq(storyObj.reachable));
+		storyObj.reachable = _.uniq(storyObj.reachable);
+//_.pluck(storyObj.reachable,"name"),storyObj.reachable);
 		storyObj.maxLength = storyObj.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
 		storyObj.avLength = storyObj.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / storyObj.passages.length;
 
