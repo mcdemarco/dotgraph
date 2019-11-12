@@ -29,7 +29,7 @@ var dotGraph = {};
 								postfix: "",
 								renumber: false,
 								rotation: "TB",
-								scale: true,
+								scale: "100%",
 								showNodeNames: false,
 								snowstick: false,
 								snowstickObj: {},
@@ -91,12 +91,28 @@ var dotGraph = {};
 context.graph = (function() {
 
 	return {
+		contrastColor: contrastColor,
 		convert: convert,
 		edit: edit,
 		saveDot: saveDot,
 		saveSvg: saveSvg,
 		scale: scale
 	};
+
+	function contrastColor(color) {
+		//color is an RGB color in the formats #abcdef or #abc (not clear that one can have worked).
+		//To support other formats like named colors grab a library.
+		if (color.charAt(0) != "#" || (color.length - 1) % 3 != 0)
+			return "#000000";
+		var colorArray = [];
+		if (color.length - 1 == 3)
+			colorArray = [color.charAt(1),color.charAt(2),color.charAt(3)];
+		else
+			colorArray = [color.substring(1,3),color.substring(3,5),color.substring(5,7)];
+		colorArray = colorArray.map(function(elt){return parseInt(elt,16)/255;});
+		var lumi = 0.299 * colorArray[0] + 0.587 * colorArray[1] + 0.114 * colorArray[2];
+		return (lumi > 0.5 ? "#000000" : "#ffffff");
+	}
 
 	function convert() {
 		//A change in the settings is what normally triggers (re)graphing, so (re)parse.
@@ -137,15 +153,27 @@ context.graph = (function() {
 
 	function scale(by) {
 		var svgElt = document.getElementsByTagName("svg")[0];
+		//Failed experiment with panzoom libraries.
+		/*if (config.panZoom) {
+			svgElt.setAttribute("width","100%");
+			svgPanZoom('svg',{
+        controlIconsEnabled: true,
+				minZoom: 0.7,
+				maxZoom: 2,
+				panEnabled: false
+      });
+			return;
+		}*/
 		svgElt.removeAttribute("height");
 
 		//parseInt or parseFloat because all values are strings with "%" or "pt" attached.
 		if (config.scale) {
-			//set size or apply increment as a percentage
-			if (typeof by == "undefined")
-				svgElt.setAttribute("width","100%");
-			else 
-				svgElt.setAttribute("width", parseInt(svgElt.getAttribute("width"),10) + (by * 100) + "%");
+			//set size to scale preset or apply increment as a percentage
+			if (typeof by != "undefined") {
+				var splitt = config.scale.split(/(\d+)/);
+				var unit = splitt[splitt.length-1]; //"%";
+				config.scale = parseInt(parseInt(svgElt.getAttribute("width"),10) * (1 + by),10) + unit;
+			}
 		} else {
 			//need to parse the viewbox for the natural size.
 			var viewBox = svgElt.getAttribute("viewBox").split(" ");
@@ -154,11 +182,13 @@ context.graph = (function() {
 			//set size or apply increment as a point value
 			if (typeof by == "undefined") {
 				//The un-fit-to-page case.  Not needed for initial sizing, but for changes.
-				svgElt.setAttribute("width",viewBox[2] + "pt");
+				config.scale = viewBox[2] + "pt";
 			} else {
-				svgElt.setAttribute("width",parseFloat(svgElt.getAttribute("width")) + (parseFloat(viewBox[2]) * by) + "pt");
+				config.scale = parseFloat(svgElt.getAttribute("width")) + (parseFloat(viewBox[2]) * by) + "pt";
 			}
 		}
+		svgElt.setAttribute("width",config.scale);
+		document.getElementById("scaleInput").value = config.scale;
 	}
 
 	//Private
@@ -355,6 +385,9 @@ context.graph = (function() {
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+			styles.push("fontcolor=\"" + config.paletteContrastColors[indx%26] + "\"");
+		} else if (config.color == "tag") {
+			//No fill for you!
  		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
 			//Solid real leaves for clarity.
 			hue = config.paletteExceptions.leafHue;
@@ -445,7 +478,7 @@ context.graph = (function() {
 		for (var t=0; t<story.tags.length; t++) {
 			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
 				tagName = scrub(storyObj.tags[t]);
-				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]");
+				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
 			}
 		}
 		tagKey.push("}");
@@ -494,7 +527,7 @@ context.init = (function() {
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
 
-		document.getElementById("scaleCheckbox").addEventListener('change', function(){context.settings.scale();}, false);
+		document.getElementById("scaleInput").addEventListener('change', function(){context.settings.scale();}, false);
 		document.getElementById("scaleUpButton").addEventListener('click', function(){context.graph.scale(config.increment);}, false);
 		document.getElementById("scaleDownButton").addEventListener('click', function(){context.graph.scale(-config.increment);}, false);
 
@@ -662,6 +695,11 @@ context.settings = (function () {
 
 	function bookmark(e) {
 		var newMark = e.target.innerHTML;
+		if (!config.showNodeNames) {
+			//newMark is a node ID, possibly renumbered, so find the title and trim it.
+			//TODO.
+			return;
+		}
 		if (newMark) {
 			//Set the bookmark.
 			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
@@ -699,6 +737,7 @@ context.settings = (function () {
 			console.log("Error checking local storage for SnowStick data: " + e.description);
 		}
 
+		//Check story for settings.
 		var DotGraphSettings;
 		if (window.document.getElementById("storeArea"))
 			DotGraphSettings = window.document.getElementById("storeArea").querySelector('div[tiddler="DotGraphSettings"]');
@@ -736,9 +775,12 @@ context.settings = (function () {
 				config[key] = value;
 		});
 
-		//Lastly, switch color to snowstick if there's data and no 'false' setting.
-		if (config.snowstick) 
-			config.color = "snow";
+		//Some settings are derived, so derive them now.
+		derive();
+
+		/* Lastly, switch color to snowstick if there's data and no 'false' setting.
+		if (config.snowstick)
+			config.color = "snow";*/
 	}
 
 	function parse() {
@@ -754,17 +796,20 @@ context.settings = (function () {
 		config.omitSpecialTags = document.getElementById("specialTagCheckbox") ? document.getElementById("specialTagCheckbox").checked : false;
 		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
-		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
+		config.scale = document.getElementById("scaleInput") ? document.getElementById("scaleInput").value : "";
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
 		config.trace = document.getElementById("trace") ? trim(document.getElementById("trace").value) : "";
+
+		//Some settings are derived, but not many in this case.
+		//derive(afterChange);
 	}
 
 	function scale() {
 		//Rescaling isn't handled like other settings.
-		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
+		config.scale = document.getElementById("scaleInput") ? document.getElementById("scaleInput").value : "";
 		context.graph.scale();
 	}
 
@@ -810,7 +855,12 @@ context.settings = (function () {
 			<input type="radio" id="engineCheckbox4" name="engineCheckbox" value="osage" <%= (engine == "osage" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox4">osage</label> \
 			<input type="radio" id="engineCheckbox5" name="engineCheckbox" value="twopi" <%= (engine == "twopi" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox5">twopi</label><br/>');
 		document.getElementById("settingsForm").innerHTML = output(config);
-		document.getElementById("scaleCheckbox").checked = config.scale;
+		document.getElementById("scaleInput").value = config.scale;
+	}
+
+	function derive() {
+		//Should also cover the exceptions, but haven't done them yet.
+		config.paletteContrastColors = config.palette.map(function(color) {return context.graph.contrastColor(color);});
 	}
 
 	function splitAndTrim(tagList) {
@@ -910,7 +960,7 @@ context.story = (function () {
 		document.querySelector("body").append(_story);
 
 		//Programmatically choose some appropriate settings.
-		config.scale = true;
+		config.scale = "";
 		if (_story.children && _story.children.length && _story.children.length < 20) {
 			config.showNodeNames = true;
 		} else {
