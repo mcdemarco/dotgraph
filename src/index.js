@@ -153,17 +153,6 @@ context.graph = (function() {
 
 	function scale(by) {
 		var svgElt = document.getElementsByTagName("svg")[0];
-		//Failed experiment with panzoom libraries.
-		/*if (config.panZoom) {
-			svgElt.setAttribute("width","100%");
-			svgPanZoom('svg',{
-        controlIconsEnabled: true,
-				minZoom: 0.7,
-				maxZoom: 2,
-				panEnabled: false
-      });
-			return;
-		}*/
 		svgElt.removeAttribute("height");
 
 		//parseInt or parseFloat because all values are strings with "%" or "pt" attached.
