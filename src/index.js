@@ -2,42 +2,71 @@ var filesaver = require("filesaver.js-npm");
 var _ = require("underscore");
 var dotGraph = {};
 
-(function(context) { 
+(function(context) {
+
+	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
+	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
 	var config = {checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
+								clusterTags: [],
 								color: "length",
 								countWords: true,
 								display: true,
+								dotExtension: "gv",
 								ends: true,
-								endTag: "End",
+								endTag: "end",
+								engine: "dot",
+								hideDot: false,
+								hideSettings: false,
+								increment: 0.2,
 								lastTag: false,
 								omitSpecialPassages: true,
+								omitSpecialTags: true,
 								omitTags: [],
+								prefix: "",
+								postfix: "",
 								renumber: false,
 								rotation: "TB",
-								scale: true,
+								scale: "100%",
 								showNodeNames: false,
+								snowstick: false,
+								snowstickObj: {},
+								tooltips: true,
 								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
 													"#16FF32", "#3283FE", "#1C8356", "#FBE426", "#FA0087",
 													"#F8A19F", "#1CBE4F", "#C4451C", "#C075A6", "#90AD1C", 
 													"#B00068", "#AA0DFE", "#FC1CBF", "#1CFFCE", "#F6222E", 
 													"#85660D", "#325A9B", "#B10DA1", "#A0A0A0", "#782AB6",
-													"#565656"]
-								};
+													"#565656"],
+								paletteExceptions: {
+									start: "#C8C8C8",
+									ends: "#C8C8C8",
+									unreachable: "#FF6666",
+									untagged: "#FFFFFF",
+									trace: "#FF8000",
+									default: "#FFFFFF",
+									leafHue: 0.30,
+									readHue: 0.22
+								}
+							 };
 
-	var specialPassageList = ["StoryTitle", "StoryIncludes",
+	var specialPassageList = ["StoryTitle", "StoryIncludes", "StoryData",
 														"StoryAuthor", "StorySubtitle", "StoryMenu", "StorySettings",
 														"StoryColophon",
 														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
 														"PassageDone", "PassageFooter", "PassageHeader", "PassageReady",
-														"MenuOptions", "MenuShare"];
+														"MenuOptions", "MenuShare", "DotGraphSettings"];
+
+	var specialTagList = ["annotation", "debug-footer", "debug-header", "debug-startup", 
+												"footer", "haml", "header", "script", "startup", "stylesheet", 
+												"twee2", "transition", "Twine.private", "widget"];
 
 	var storyObj = {title: "Untitled", 
 									startNode: 1, 
-									startNodeName: "Start", 
+									startNodeName: "Start",
 									leaves: 0,
 									links: 0,
 									tightEnds: 0,
@@ -51,6 +80,8 @@ var dotGraph = {};
 									twineVersion: 0
 								 };
 
+	var viz = new Viz();
+
 //graph
 //init
 //passage
@@ -60,24 +91,43 @@ var dotGraph = {};
 context.graph = (function() {
 
 	return {
+		contrastColor: contrastColor,
 		convert: convert,
 		edit: edit,
 		saveDot: saveDot,
-		saveSvg: saveSvg
+		saveSvg: saveSvg,
+		scale: scale
 	};
 
+	function contrastColor(color) {
+		//color is an RGB color in the formats #abcdef or #abc (not clear that one can have worked).
+		//To support other formats like named colors grab a library.
+		if (color.charAt(0) != "#" || (color.length - 1) % 3 != 0)
+			return "#000000";
+		var colorArray = [];
+		if (color.length - 1 == 3)
+			colorArray = [color.charAt(1),color.charAt(2),color.charAt(3)];
+		else
+			colorArray = [color.substring(1,3),color.substring(3,5),color.substring(5,7)];
+		colorArray = colorArray.map(function(elt){return parseInt(elt,16)/255;});
+		var lumi = 0.299 * colorArray[0] + 0.587 * colorArray[1] + 0.114 * colorArray[2];
+		return (lumi > 0.5 ? "#000000" : "#ffffff");
+	}
+
 	function convert() {
+		//A change in the settings is what normally triggers (re)graphing, so (re)parse.
+		context.settings.parse();
+		context.story.parse();
+
 		//Get the dot graph source.
 		var output = dot();
 		
 		//Write the dot graph text to the page.
 		var dotTextarea = document.getElementById("dotfile");
 		dotTextarea.value = output;
-		dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
+		//dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
 		
-		//Do the conversion and write the svg to the page.
-		document.getElementById("graph").innerHTML = Viz(output,"svg");
-		context.settings.scale();
+		render(output);
 	}
 			
 	function edit() {
@@ -85,40 +135,63 @@ context.graph = (function() {
 		//in that case, read the dot file from the browser and render it.
 		var editedOutput = document.getElementById("dotfile").value;
 
-		//Needs error handling?
-		document.getElementById("graph").innerHTML = Viz(editedOutput,"svg");
-		context.settings.scale();
+		render(editedOutput);
 	}
 
 	function saveDot() {
 		var output = document.getElementById("dotfile").value;
 		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "dot" + Date.now() + ".txt", true);
+		filesaver.saveAs(blob, "dot" + Date.now() + "." + config.dotExtension, true);
  	}
 
 	function saveSvg() {
-		//Having trouble reading the existing svg off the page, so regenerate it.
-		var output = document.getElementById("dotfile").value;
-		var preblob = Viz(output,"svg").replace("no","yes");
-		var blob = new Blob([preblob], {type: "image/svg+xml;charset=utf-8"});
+		//Read the existing svg off the page.
+		var svgTxt = document.getElementById("graph").firstChild.outerHTML;
+		var blob = new Blob([svgTxt], {type: "image/svg+xml;charset=utf-8"});
 		filesaver.saveAs(blob, "dotgraph" + Date.now() + ".svg", true);
  	}
 
+	function scale(by) {
+		var svgElt = document.getElementsByTagName("svg")[0];
+		svgElt.removeAttribute("height");
+
+		//parseInt or parseFloat because all values are strings with "%" or "pt" attached.
+		if (config.scale) {
+			//set size to scale preset or apply increment as a percentage
+			if (typeof by != "undefined") {
+				var splitt = config.scale.split(/(\d+)/);
+				var unit = splitt[splitt.length-1]; //"%";
+				config.scale = parseInt(parseInt(svgElt.getAttribute("width"),10) * (1 + by),10) + unit;
+			}
+		} else {
+			//need to parse the viewbox for the natural size.
+			var viewBox = svgElt.getAttribute("viewBox").split(" ");
+			// viewBox[2] is width, viewBox[3] is height, in points.
+
+			//set size or apply increment as a point value
+			if (typeof by == "undefined") {
+				//The un-fit-to-page case.  Not needed for initial sizing, but for changes.
+				config.scale = viewBox[2] + "pt";
+			} else {
+				config.scale = parseFloat(svgElt.getAttribute("width")) + (parseFloat(viewBox[2]) * by) + "pt";
+			}
+		}
+		svgElt.setAttribute("width",config.scale);
+		document.getElementById("scaleInput").value = config.scale;
+	}
+
 	//Private
 	function dot() {
-		//(Re)parse the story and return the dot graph source.
+		//Return the dot graph source.
 		var buffer = [];
-
-		//A change in the settings is what normally triggers regraphing.
-		context.settings.parse();
-		context.story.parse();
 
 		buffer.push("digraph " + scrub(storyObj.title) + " {");
 		buffer.push("rankdir=" + config.rotation + "\r\n");
 		
 		if (config.cluster) {
 			buffer = buffer.concat(writeClusters(storyObj.tagObject));
-		} else if (config.color == "tag") {
+		}
+		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
 			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
@@ -154,7 +227,7 @@ context.graph = (function() {
 		return linkGraph;
 	}
 
-	function getNameOrPid(passage, reversed, withCount) {
+	function getNameOrPid(passage, reversed, withCount, withAffix) {
 		//Used to get the node label in the style requested by the settings, 
 		//except in tooltips, where we give the alternate label and a word count.
 		var name;
@@ -167,6 +240,8 @@ context.graph = (function() {
 		}
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
+		if (withAffix)
+			name = config.prefix + name + config.postfix;
 		return scrub(name);
 	}
 
@@ -179,6 +254,10 @@ context.graph = (function() {
 			name = getPidFromTarget(target);
 		}
 		return name;
+	}
+
+	function makeHSV(hue, sat, val) {
+		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
 	}
 
 	function passages() {
@@ -221,26 +300,51 @@ context.graph = (function() {
 		var styles = stylePassage(passage, label);
 
 		var links = graphLinks(passage, scrubbedNameOrPid);
-		
-		//Push the node itself with styles (because it's always styled in some way).
+		//Push the node itself and the styles (because it's always styled in some way).
 		result.push("\r\n" + scrubbedNameOrPid + " [" + styles.join(' ') + "]");
-
+		
 		//Push the link list.
 		result = result.concat(links);
 
 		return result;
 	}
 
+	function render(output) {
+		//Clear the area!
+		document.getElementById("graph").innerHTML = "";
+
+		//Do the conversion and write the svg to the page.
+		viz.renderSVGElement(output, {engine: config.engine})
+			.then(function(result){
+				document.getElementById("graph").appendChild(result);
+				context.graph.scale();
+				if (config.snowstick) {
+					//Activate the nodes for rebookmarking.
+					document.querySelectorAll("#graph g.node text").forEach(function(elt){elt.addEventListener('click', context.settings.bookmark, false);});
+				}
+			})
+			.catch(function(error){
+				// Create a new Viz instance
+				viz = new Viz();
+				// Possibly display the error
+				console.log(error);
+			});
+	}
+
 	function stylePassage(passage, label) {
 		var styles = [];
 
 		var hue = 0;
+		var sat = 0;
+		var val = 1;
 		var pid = passage.pid;
 		var content = passage.content;
 		var tag = passage.theTag;
 
 		//Start with any special shape for the passage.
-		if (passage.trace) {
+		if (config.snowstick && passage.ssBookmark) {
+			styles.push("shape=note");
+		} else if (passage.trace) {
 			styles.push("shape=hexagon");
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.push("shape=doublecircle");
@@ -262,29 +366,79 @@ context.graph = (function() {
 		
 		//Calculate color.
 		if (config.color == "length") {
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  //HSV red-to-green range
+			//Graphviz supports HSV, so use it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
 			styles.push("fillcolor=\"" + hue + "\"");
+			styles.push("fontcolor=\"" + config.paletteContrastColors[indx%26] + "\"");
+		} else if (config.color == "tag") {
+			//No fill for you!
+ 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
+			//Solid real leaves for clarity.
+			hue = config.paletteExceptions.leafHue;
+			styles.push("fillcolor=\"" + makeHSV(hue,0.90,0.50) + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf) {
+			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.leafHue;
+			sat = passage.ssLeaf;
+			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+ 		} else if (passage.trace) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
+ 		} else if (config.snowstick && passage.ssRead) {
+			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.readHue;
+			sat = passage.ssRead;
+			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+		} else if (pid == storyObj.startNode) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.ends + "\"");
+		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.unreachable + "\"");
+ 		} else if (config.color == "tag") {
+			styles.push("fillcolor=\"" + config.paletteExceptions.untagged + "\"");
+ 		} else {
+			styles.push("fillcolor=\"" + config.paletteExceptions.default + "\"");
 		}
 
-		//Rename the node if a label was passed in.
-		if (label)
-			styles.push("label=\"" + label + "\"");
+		//Rename the node if a label or prefix was passed in.
+		if (label || config.prefix || config.postfix) {
+			if (label)
+				styles.push("label=\"" + config.prefix + label + config.postfix + "\"");
+			else
+				styles.push("label=" + getNameOrPid(passage, false, false, true));
+		}
 		
 		//Add a tooltip.
-		styles.push("tooltip=" + getNameOrPid(passage, true, true));
+		if (config.tooltips) {
+			styles.push("tooltip=" + getNameOrPid(passage, true, true));
+		}
 		return styles;
 	}
 
 	function scrub(name) {
 		//Put names into a legal dot format.
 		if (name) {
-			// dangerously scrubbing non-ascii characters for graphviz bug
-			name = name.replace(/"/gm,"\\\"").replace(/[^\x00-\x7F]/g, "");
+			// dangerously scrubbing non-ascii characters for graphviz bug.
+			// the long regex is for emoji, from https://thekevinscott.com/emojis-in-javascript/
+			//Try new viz with noscrub, just the quote escaping.
+			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "_").replace(/[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c\ude32-\ude3a]|[\ud83c\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff]/g, "_");
+			/* 
+				//Another emoji-squashing method:
+			name = _.map(name.toString().split(""), function(chr) {
+				chrat = chr.charCodeAt(0);
+				// (chrat == 34 ? '\\\"' : chr)
+				return (chrat >= 32 && chrat <= 126 ? chr : "_");
+			}).join("");
+			*/
 			// add literal quotes for names in all cases.
 			name = '"' + name + '"';
 		}
@@ -295,7 +449,7 @@ context.graph = (function() {
 		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag)) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
 				clusters.push("subgraph cluster_" + clusterIndex + " {");
 				clusters.push("label=" + scrub(tag));
 				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
@@ -313,7 +467,7 @@ context.graph = (function() {
 		for (var t=0; t<story.tags.length; t++) {
 			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
 				tagName = scrub(storyObj.tags[t]);
-				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\"]");
+				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
 			}
 		}
 		tagKey.push("}");
@@ -340,19 +494,34 @@ context.init = (function() {
 		//Onload function.
 		context.settings.load();
 		context.settings.write();
+		context.settings.toggle();
 		activateForm();
 		context.graph.convert();
+
+		//Check for a passed-in URL.
+		if (window.location.search && window.location.search.split("?")[1].length > 0) {
+			context.story.load(window.location.search.split("?")[1]);
+		}
 	}
 
 	//Private.
 	function activateForm() {
 		document.getElementById("settingsForm").addEventListener('click', context.graph.convert, false);
-		document.getElementById("omitTags").addEventListener('change', context.graph.convert, false);
-		document.getElementById("trace").addEventListener('change', context.graph.convert, false);
+		document.getElementById("clusterTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("omitTags").addEventListener('input', _.debounce(context.graph.convert,1000), false);
+		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 
+		//Not actually part of the settings form.
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
+
+		document.getElementById("scaleInput").addEventListener('change', function(){context.settings.scale();}, false);
+		document.getElementById("scaleUpButton").addEventListener('click', function(){context.graph.scale(config.increment);}, false);
+		document.getElementById("scaleDownButton").addEventListener('click', function(){context.graph.scale(-config.increment);}, false);
+
+		document.getElementById("dotHeader").addEventListener('click', function(){context.settings.toggle("dotSection");}, false);
+		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
 	}
 
 })();
@@ -391,6 +560,12 @@ context.passage = (function() {
 		passageObj.omit = hasOmittedTag(passageObj);
 		passageObj.trace = (config.trace && source.innerText.indexOf(config.trace) > -1);
 
+		//SnowStick.
+		if (config.snowstick) {
+			passageObj.ssLeaf = Math.max(config.snowstickObj.leaf.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.leaf.length,1);
+			passageObj.ssRead = Math.max(config.snowstickObj.read.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.read.length,1);
+			passageObj.ssBookmark = (config.snowstickObj.bookmark == passageObj.name);
+		}
 		return passageObj;
 	}
 
@@ -411,11 +586,11 @@ context.passage = (function() {
 	}
 
 	function hasOmittedTag(passage) {
-		if (config.omitTags.length == 0) 
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
 			return false;
 		else {
-			for (var t=0; t<config.omitTags.length; t++) {
-				if (hasTag(passage,config.omitTags[t]))
+			for (var t=0; t<passage.tagArray.length; t++) {
+				if (context.settings.isOmittedTag(passage.tagArray[t]))
 					return true;
 			}
 			return false;
@@ -498,72 +673,144 @@ context.passage = (function() {
 context.settings = (function () {
 
 	return {
+		bookmark: bookmark,
 		isOmittedTag: isOmittedTag,
 		load: load,
 		parse: parse,
 		scale: scale,
+		toggle: toggle,
 		write: write
 	};
 
+	function bookmark(e) {
+		var newMark = e.target.innerHTML;
+		if (!config.showNodeNames) {
+			//newMark is a node ID, possibly renumbered, so find the title and trim it.
+			//TODO.
+			return;
+		}
+		if (newMark) {
+			//Set the bookmark.
+			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
+			try {
+				localStorage.setItem("snowstick-bookmark" + ifid, newMark);
+				config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + ifid) ? localStorage.getItem("snowstick-bookmark" + ifid) : "";
+			} catch (e) {
+				console.log("Bookmarking failed.");
+			}
+		}
+	};
+
 	function isOmittedTag(tag) {
-		if (config.omitTags.length == 0) 
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
 			return false;
 		else {
-			for (var t=0; t<config.omitTags.length; t++) {
-				if (config.omitTags[t] == tag)
-					return true;
-			}
-			return false;
+			if (config.omitTags.indexOf(tag) > -1)
+				return true;
+			if (config.omitSpecialTags && specialTagList.indexOf(tag) > -1)
+				return true;
 		}
+		return false;
 	}
 
 	function load() {
-		//Parse the StorySettings for dotgraph presets.
-		var StorySettings;
-		if (window.document.getElementById("storeArea"))
-			StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
-		else 
-			StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
-
-		if (!StorySettings)
-			return;
-
-		var dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+		//Check localStorage for snowstick.
 		try {
-			dgSettings = JSON.parse(dgSettings);
-		} catch(e) {
-			console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
-			return;
+			var ifid = window.document.querySelector('tw-storydata') ? "-" + window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
+			config.snowstickObj["read"] = localStorage.getItem("snowstick-read" + ifid) ? JSON.parse(localStorage.getItem("snowstick-read" + ifid)) : [];
+			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf" + ifid) ? JSON.parse(localStorage.getItem("snowstick-leaf" + ifid)) : [];
+			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + ifid) ? localStorage.getItem("snowstick-bookmark" + ifid) : "";
+			config.snowstick = (config.snowstickObj.leaf.length > 0 || config.snowstickObj.read.length > 0 || config.snowstickObj.bookmark.length > 0);
+		} catch (e) {
+			config.snowstick = false;
+			console.log("Error checking local storage for SnowStick data: " + e.description);
 		}
+
+		//Check story for settings.
+		var DotGraphSettings;
+		if (window.document.getElementById("storeArea"))
+			DotGraphSettings = window.document.getElementById("storeArea").querySelector('div[tiddler="DotGraphSettings"]');
+		else 
+			DotGraphSettings = window.document.querySelector('tw-passagedata[name="DotGraphSettings"]');
+
+		if (DotGraphSettings) {
+			//Don't require dotgraph: label or single-line layout but must still parse as a JSON object.
+			dgSettings = DotGraphSettings.innerText;
+		} else {
+			//Parse the StorySettings for dotgraph presets.  May fail mysteriously under Tweego 1.3.
+			var StorySettings, dgSettings;
+			if (window.document.getElementById("storeArea"))
+				StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
+			else 
+				StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
+	
+			if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
+				dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+			}
+		}
+
+		if (dgSettings) {
+			try {
+				dgSettings = JSON.parse(dgSettings);
+			} catch(e) {
+				console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
+				return;
+			}
+		}
+
 		_.each(dgSettings, function(value, key) {
-			config[key] = value;
+			//Do not reset snowstick to true if there's no data.
+			if (key != "snowstick" || !value) 
+				config[key] = value;
 		});
+
+		//Some settings are derived, so derive them now.
+		derive();
+
+		/* Lastly, switch color to snowstick if there's data and no 'false' setting.
+		if (config.snowstick)
+			config.color = "snow";*/
 	}
 
 	function parse() {
 		//Check for config changes.
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
 		config.cluster = document.getElementById("clusterCheckbox") ? document.getElementById("clusterCheckbox").checked : false;
-//rewriting to bw/length/tag
+		config.clusterTags =  document.getElementById("clusterTags") ? splitAndTrim(document.getElementById("clusterTags").value) : [];
 		config.color = document.querySelector("input[name='colorCheckbox']:checked") ? document.querySelector("input[name='colorCheckbox']:checked").value : "length";
 		config.display = document.getElementById("displayCheckbox") ? document.getElementById("displayCheckbox").checked : true;
 		config.ends = document.getElementById("endsCheckbox") ? document.getElementById("endsCheckbox").checked : false;
+		config.engine = document.querySelector("input[name='engineCheckbox']:checked") ? document.querySelector("input[name='engineCheckbox']:checked").value : "dot";
 		config.omitSpecialPassages = document.getElementById("specialCheckbox") ? document.getElementById("specialCheckbox").checked : false;
+		config.omitSpecialTags = document.getElementById("specialTagCheckbox") ? document.getElementById("specialTagCheckbox").checked : false;
 		config.renumber = document.getElementById("renumberCheckbox") ? document.getElementById("renumberCheckbox").checked : false;
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
-		config.scale = document.getElementById("scaleCheckbox") ? document.getElementById("scaleCheckbox").checked : true;
+		config.scale = document.getElementById("scaleInput") ? document.getElementById("scaleInput").value : "";
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
 		config.trace = document.getElementById("trace") ? trim(document.getElementById("trace").value) : "";
+
+		//Some settings are derived, but not many in this case.
+		//derive(afterChange);
 	}
-			
+
 	function scale() {
-		if (config.scale) {
-			var svgElt = document.getElementsByTagName("svg")[0];
-			svgElt.setAttribute("width","100%");
-			svgElt.removeAttribute("height");
+		//Rescaling isn't handled like other settings.
+		config.scale = document.getElementById("scaleInput") ? document.getElementById("scaleInput").value : "";
+		context.graph.scale();
+	}
+
+	function toggle(section) {
+		//Check all toggleable sections against the settings and adapt.
+		if (section) {
+			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
+		} else {
+			if (config.hideDot)
+				document.getElementById("dotSection").style.display = "none";
+			if (config.hideSettings)
+				document.getElementById("settingsSection").style.display = "none";
 		}
 	}
 
@@ -574,22 +821,35 @@ context.settings = (function () {
 			<input type="checkbox" id="renumberCheckbox" name="renumberCheckbox" <%= (renumber ? "checked" : "") %>/><label for="renumberCheckbox">&nbsp;renumber from 1</label><br /> \
 			<input type="radio" id="colorCheckbox0" name="colorCheckbox" value="bw" <%= (color == "bw" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox0">Black & white</label> \
 			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="length" <%= (color == "length" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox1">Color by node length</label> \
-			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label><br/> \
+			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label> ' + 
+			(config.snowstick ? '<input type="radio" id="colorCheckbox3" name="colorCheckbox" value="snow" <%= (color == "snow" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox3" title="SnowStick">Color by read state</label>' : '') + '<br/> \
 			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
-			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryAuthor,&nbsp;StorySubtitle,&nbsp;etc.)<br/> \
-			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="input" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(" ")%>"/><br/> \
-			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox">Detect checkpoint tags</label> \
-			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox">Detect end tags</label> \
-			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox">Use last tag</label><br/> \
-			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags</label> \
-			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /><br/> \
-			<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
+			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
+			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;by&nbsp;special&nbsp;tags</label> (script,&nbsp;etc.)<br/> \
+			<input type="radio" id="omitTagsFakeRadioButton" disabled/>&nbsp;<label for="omitTags">Omit by tag(s):</label>&nbsp;<input type="text" id="omitTags" placeholder="Separate tags with commas." value="<%=omitTags.join(", ")%>"/><br/> \
+			<input type="checkbox" id="checkpointsCheckbox" <%= (checkpoint ? "checked" : "") %> />&nbsp;<label for="checkpointsCheckbox" title="This changes the shape of checkpoint passages to a diamond.">Detect checkpoint tags</label> \
+			<input type="checkbox" id="endsCheckbox" <%= (ends == true ? "checked" : "") %>/>&nbsp;<label for="endsCheckbox" title="This changes the shape of end passages to an egg and puts diagonals on loose ends and disconnected nodes.">Detect end tags</label> \
+			<input type="checkbox" id="lastTagCheckbox" <%= (lastTag ? "checked" : "") %> />&nbsp;<label for="lastTagCheckbox" title="The cluster and color by tag options normally use the first tag on each passage.">Use last tag</label><br/> \
+			<input type="checkbox" id="clusterCheckbox" <%= (cluster ? "checked" : "") %> />&nbsp;<label for="clusterCheckbox">Cluster by tags:</label>&nbsp;<input type="text" id="clusterTags" placeholder="Separate tags with commas; leave blank for all tags." value="<%=clusterTags.join(", ")%>"/><br/> \
+			<input type="radio" id="traceFakeRadioButton" disabled/>&nbsp;<label for="trace" title="Traced nodes are hex-shaped.">Trace phrase:</label>&nbsp;<input type="input" id="trace" value="<%=trace%>" /> <br/> \
+			<input type="radio" id="engineCheckbox0" name="engineCheckbox" value="circo" <%= (engine == "circo" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox0">circo</label> \
+			<input type="radio" id="engineCheckbox1" name="engineCheckbox" value="dot" <%= (engine == "dot" ? "checked" : "")%> />&nbsp;<label for="engineCheckbox1">dot</label> \
+			(<input type="radio" id="rotateCheckbox0" name="rotateCheckbox" value="TB" <%= (rotation == "TB" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox0" title="Top to bottom">&darr;</label> \
 			<input type="radio" id="rotateCheckbox1" name="rotateCheckbox" value="LR" <%= (rotation == "LR" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox1" title="Left to right">&rarr;</label> \
 			<input type="radio" id="rotateCheckbox2" name="rotateCheckbox" value="BT" <%= (rotation == "BT" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox2" title="Bottom to top">&uarr;</label> \
-			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL" <%= (rotation == "RL" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox3" title="Right to left">&larr;</label> \
-			<input type="checkbox" id="scaleCheckbox" <%= (scale ? "checked" : "") %> />&nbsp;<label for="scaleCheckbox">Scale to fit page</label><br/>');
+			<input type="radio" id="rotateCheckbox3" name="rotateCheckbox" value="RL" <%= (rotation == "RL" ? "checked" : "")%> />&nbsp;<label for="rotateCheckbox3" title="Right to left">&larr;</label>) \
+			<input type="radio" id="engineCheckbox2" name="engineCheckbox" value="fdp" <%= (engine == "fdp" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox2">fdp</label> \
+			<input type="radio" id="engineCheckbox3" name="engineCheckbox" value="neato" <%= (engine == "neato" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox3">neato</label> \
+			<input type="radio" id="engineCheckbox4" name="engineCheckbox" value="osage" <%= (engine == "osage" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox4">osage</label> \
+			<input type="radio" id="engineCheckbox5" name="engineCheckbox" value="twopi" <%= (engine == "twopi" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox5">twopi</label><br/>');
 		document.getElementById("settingsForm").innerHTML = output(config);
+		document.getElementById("scaleInput").value = config.scale;
+	}
+
+	function derive() {
+		//Should also cover the exceptions, but haven't done them yet.
+		config.paletteContrastColors = config.palette.map(function(color) {return context.graph.contrastColor(color);});
 	}
 
 	function splitAndTrim(tagList) {
@@ -617,7 +877,89 @@ context.settings = (function () {
 context.story = (function () {
 
 	return {
+		load: load,
 		parse: parse
+	};
+
+	function load(theURL,retry) {
+		//Load a story from a URL.
+		//Clear now for clarity.
+		if (document.querySelector('tw-storydata, div#storeArea'))
+			document.querySelector('tw-storydata, div#storeArea').remove();
+		if (!retry)
+			document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + theURL + "</tt> ...<span id='loadingResult' style='color:tomato;'></span><p>";
+
+		//Get the URL.  Some sites might not need the proxy, and in general it would be better to fail over them.
+		if (!theURL)
+			return;
+		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0) 
+			theURL = ttCorsProxy + theURL;
+		else
+			theURL = corsProxy + theURL;
+
+		var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = loadListener;
+		xhr.open('GET', theURL);
+		xhr.responseType = 'document';
+		xhr.send();
+	};
+
+	function loadListener() {
+		//Parse the response for story bits.
+		if (this.readyState != 4 || (this.status != 200 && this.status != 304)) {
+			document.getElementById('loadingResult').innerHTML = " not found.";
+			return;
+		}
+
+		var _story = this.response.querySelector('tw-storydata, div#storeArea');
+		if (!_story) {
+			var newURL;
+			//Most browsers support responseURL so didn't bother to bind the original URL.
+			var oldURL = this.response.url ? this.response.url : (this.responseURL ?  this.responseURL : "");
+			var _meta = this.response.querySelector('meta[http-equiv=refresh]');
+			if (_meta) {
+				//Read the refresh manually.
+				var _temp = this.response.querySelector('meta[http-equiv=refresh]').getAttribute('content');
+				if (_temp)
+					newURL = _temp.split(";URL=")[1];
+			} else if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
+				//Fix philome.la links.
+				newURL = oldURL + "/play";
+			} else if (oldURL.indexOf("itch.io") > 0) {
+				//If itch, try to break out of the frame.
+				newURL = this.response.querySelector('iframe[src]').getAttribute('src');
+				//Itch seems to be all https, and the src to lack a protocol.
+				if (newURL.indexOf("http") < 0)
+					newURL = "https:" + newURL;
+			} else if (oldURL.indexOf("ifdb.tads.org") > 0) {
+				//also blocking the cors server.
+				newURL = this.response.querySelector('div#links-div a'); 
+				if (newURL)
+					newURL = newURL.getAttribute('href');
+			}
+			
+			if (newURL)
+				context.story.load(newURL,true);
+			else
+				document.getElementById('loadingResult').innerHTML = " failed.";
+			return;
+		}
+
+		//Write story to the page (overwriting the existing story if necessary).
+		document.querySelector("body").append(_story);
+
+		//Programmatically choose some appropriate settings.
+		config.scale = "";
+		if (_story.children && _story.children.length && _story.children.length < 20) {
+			config.showNodeNames = true;
+		} else {
+			config.showNodeNames = false;
+		}
+		//Rewrite the config because otherwise we'll read the old config.
+		context.settings.write();
+
+		//Graph.
+		context.graph.convert();
 	};
 
 	function parse() {
@@ -644,9 +986,9 @@ context.story = (function () {
 			storyObj.title = storyTwine2.getAttribute("name") ? storyTwine2.getAttribute("name") : "Untitled";
 			storyObj.startNode = storyTwine2.getAttribute("startnode") ? storyTwine2.getAttribute("startnode") : 1;
 		} else {
-			//Not clear this can occur.
-			storyObj.title = 1;
-			storyObj.startNode = 1;
+			//This can occur with a missing story (as in DGaaS) or a failed load.
+			storyObj.title = "Story not found";
+			storyObj.startNode = "";
 		}
 
 		if (storyTwine1)
@@ -662,7 +1004,7 @@ context.story = (function () {
 		storyObj.tagObject = {};
 		storyObj.tags = [];
 		storyObj.targets = {};
-		storyObj.reachable = storyObj.reachable.concat(specialPassageList);
+		//storyObj.reachable = storyObj.reachable.concat(specialPassageList);
 
 		for (p = 0; p < storyObj.passages.length; p++) {
 
@@ -701,8 +1043,9 @@ context.story = (function () {
 
 		};
 
-		storyObj.reachable = _.uniq(storyObj.reachable); 
-		storyObj.unreachable = _.difference(_.pluck(storyObj.passages,"name"),storyObj.reachable);
+		storyObj.unreachable = _.difference(storyObj.reachable, _.uniq(storyObj.reachable));
+		storyObj.reachable = _.uniq(storyObj.reachable);
+//_.pluck(storyObj.reachable,"name"),storyObj.reachable);
 		storyObj.maxLength = storyObj.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
 		storyObj.avLength = storyObj.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / storyObj.passages.length;
 
@@ -736,7 +1079,7 @@ context.story = (function () {
 		}
 
 		document.getElementById("linkCount").innerHTML = storyObj.links;
-		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / storyObj.passages.length))/100;
+		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / Math.max(storyObj.passages.length,1)))/100;
 
 		document.getElementById("stats").setAttribute("title","Twine " + storyObj.twineVersion);
 	}
