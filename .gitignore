@@ -5,3 +5,5 @@ doc/*
 build/*
 dist/*
 package-lock.json
+release/*
+release.zip

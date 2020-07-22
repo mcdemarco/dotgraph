@@ -4,7 +4,9 @@ DotGraph is a proofing format for Twine 1 and 2 that generates a GraphViz image 
 
 To add DotGraph to Twine 2, use this URL (under Formats > Add a New Format): [https://mcdemarco.net/tools/scree/dotgraph/format.js](https://mcdemarco.net/tools/scree/dotgraph/format.js).
 
-To add DotGraph to Twine 1, create a new folder called `dotgraph` inside your targets folder, then download this file [https://mcdemarco.net/tools/scree/dotgraph/header.html](https://mcdemarco.net/tools/scree/dotgraph/header.html) and place it inside the `dotgraph` folder.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
+To add DotGraph to Twine 1, download the latest [release.zip](https://github.com/mcdemarco/dotgraph/releases/latest) from GitHub, unzip it, and move one of the `dotgraph-1` folders to your Twine 1 targets folder.  Alternately, create a new folder called `dotgraph` inside your targets folder, then download this file [https://mcdemarco.net/tools/scree/dotgraph/header.html](https://mcdemarco.net/tools/scree/dotgraph/header.html) and place it inside the `dotgraph` folder.  (See the Twine wiki for more information about installing and using story formats in Twine 1.)
+
+To used DotGraph with a compiler like [TweeGo](http://www.motoslave.net/tweego/), download the latest `release.zip` from GitHub, unzip it, and move one of the dotgraph folders to the appropriate location for story formats.
 
 To use DotGraph to graph a published story, open an already-dotgrapphed story in a browser and add a question mark followed by the story's URL.
 You can also do this by typing in the URL at the DotGraph site [here](https://mcdemarco.net/tools/scree/dotgraph/#DotGraph.as.a.Service).
@@ -21,12 +23,18 @@ The layout engine options change the graph style; some options are slower than t
 
 The image format is SVG.
 
+## Online vs. Offline
+
+The offline versions package the entire Graphviz renderer in the head of the DotGraph output file, making it large but freestanding. The online versions fetch the Graphviz renderer from my website, so an internet connection is required when using them but the file may be also be cached (making your output file load faster if you run DotGraph frequently).  In some cases you can only run offline.
+
 ## Troubleshooting
 
 DotGraph may fail to draw the graph in some versions of Twine 2 due to issues with Chrome;
 in that case it will still give you the text of the dot source file, as well as some links to sites online that can render it for you.
 
 DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
+
+For more troubleshooting, help, and examples, see [the DotGraph website](mcdemarco.net/tools/scree/dotgraph/).
 
 ## SnowStick
 
