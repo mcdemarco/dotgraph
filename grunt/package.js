@@ -1,7 +1,7 @@
 module.exports = function(grunt) {
 	var pkg = require('../package.json');
 
-	grunt.registerTask('package:format', function() {
+	grunt.registerTask('package:format', "Package Twine 2 online story format", function() {
 		var formatData = {
 			description: pkg.description,
 			author: pkg.author.replace(/ <.*>/, ''),
@@ -21,7 +21,7 @@ module.exports = function(grunt) {
 		grunt.file.copy('src/icon.svg', 'dist/Twine2/online/' + pkg.name + '/icon.svg');
 	});
 
-	grunt.registerTask('package:offline', function() {
+	grunt.registerTask('package:offline', "Package Twine 2 offline story format", function() {
 		var formatData = {
 			description: pkg.description,
 			author: pkg.author.replace(/ <.*>/, ''),
@@ -41,13 +41,11 @@ module.exports = function(grunt) {
 		grunt.file.copy('src/icon.svg', 'dist/Twine2/offline/' + pkg.name + '/icon.svg');
 	});
 
-	grunt.registerTask('package:header', function() {
+	grunt.registerTask('package:twine1', "Package Twine 1 story format versions", function() {
 		grunt.file.copy('build/header.html', 'dist/Twine1/online/' + pkg.name + '/header.html');
-	});
-
-	grunt.registerTask('package:offline1', function() {
 		grunt.file.copy('build/offline/header.html', 'dist/Twine1/offline/' + pkg.name + '/header.html');
 	});
 
-	grunt.registerTask('package', ['build:release', 'package:format', 'package:offline', 'package:header', 'package:offline1']);
+	grunt.registerTask('package', ['build:release', 'package:format', 'package:offline', 'package:twine1']);
+
 };

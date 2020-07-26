@@ -36,7 +36,7 @@ module.exports = function(grunt) {
 		}
 	});
 
-	grunt.registerTask('html:release', function() {
+	grunt.registerTask('html:release', "Build Twine 2 online story format", function() {
 		var template = _.template(grunt.file.read('src/index.html'));
 
 		var data = {
@@ -49,7 +49,7 @@ module.exports = function(grunt) {
 		grunt.file.write('build/format.html', template(data));
 	});
 
-	grunt.registerTask('html:offline', function() {
+	grunt.registerTask('html:offline', "Build Twine 2 offline story format", function() {
 		var template = _.template(grunt.file.read('src/index.html'));
 
 		var data = {
@@ -62,7 +62,7 @@ module.exports = function(grunt) {
 		grunt.file.write('build/offline/format.html', template(data));
 	});
 
-	grunt.registerTask('html:release1', function() {
+	grunt.registerTask('html:release1', "Build Twine 1 online story format", function() {
 		var template = _.template(grunt.file.read('src/index.html'));
 
 		var data = {
@@ -75,7 +75,7 @@ module.exports = function(grunt) {
 		grunt.file.write('build/header.html', template(data));
 	});
 
-	grunt.registerTask('html:offline1', function() {
+	grunt.registerTask('html:offline1', "Build Twine 1 offline story format", function() {
 		var template = _.template(grunt.file.read('src/index.html'));
 
 		var data = {
