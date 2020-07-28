@@ -20,6 +20,7 @@ var dotGraph = {};
 								engine: "dot",
 								hideDot: false,
 								hideGML: true,
+								hideGraphML: true,
 								hideSettings: false,
 								increment: 0.2,
 								lastTag: false,
@@ -89,7 +90,7 @@ var dotGraph = {};
 //passage
 //settings
 //story
- 
+
 context.dot = (function() {
 
 	return {
@@ -383,7 +384,7 @@ context.gml = (function() {
 		buffer.push("graph [");
 		buffer.push("directed 1");
 		//The rather underspecified GML format appears to require integer IDs.
-		buffer.push("id " + (ifid ? ifid : storyObj.passages.length + 18));
+		buffer.push("id " + (ifid ? ifid : storyObj.passages.length + 1800));
 		//Push title.
 		buffer.push("label " + scrub(storyObj.title));
 
@@ -527,6 +528,290 @@ context.gml = (function() {
 
 })();
 
+context.graphml = (function() {
+
+	return {
+		convert: convert
+	};
+
+	function convert() {
+		//Return the dot graph source.
+		var buffer = [];
+		var ifid = context.settings.ifid();
+
+		var header = '<?xml version="1.0" encoding="UTF-8"?>\r\n' + 
+				'<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\r\n' + 
+				'\t<graph id="' + (ifid ? ifid : storyObj.passages.length + 1800) + '" edgedefault="directed">\r\n\t\t';
+
+		buffer.push('<desc>' + storyObj.title + '</desc>');
+
+		/* also no way to cluster?
+		if (config.cluster) {
+			buffer = buffer.concat(writeClusters(storyObj.tagObject));
+		}
+		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
+			buffer = buffer.concat(writeTagKey(storyObj,config));
+		}
+		*/
+
+		//The main part of the graph is the passage graphing, including links.
+		buffer = buffer.concat(passages());
+
+		var footer = '\r\n\t</graph>\r\n</graphml>\r\n';
+		
+		return header + buffer.join("\r\n\t\t") + footer;
+	}
+
+	//private
+
+	function getPidFromTarget(target) {
+		if (storyObj.targets.hasOwnProperty(target))
+			return storyObj.targets[target];
+		else
+			return scrub(target);
+	}	
+
+	function graphLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l][0];
+			var linkForGraph = '<edge source="' + passage.pid + '" target="' + getPidFromTarget(target) + '">';
+			if (passage.links[l][1])
+				linkForGraph += '<desc>display link</desc>';
+			linkForGraph += '</edge>';
+			linkGraph.push(linkForGraph);
+		}
+		return linkGraph;
+	}
+
+	function getNameOrPid(passage, reversed, withCount, withAffix) {
+		//Used to get the node label in the style requested by the settings, 
+		//except in tooltips, where we give the alternate label and a word count.
+		var name;
+		var returnAsName = (reversed ? !config.showNodeNames : config.showNodeNames);
+
+		if (returnAsName) {
+			name = passage.name;
+		} else {
+			name = passage.pid ? passage.pid : "Untitled Passage";
+		}
+		if (withCount && config.countWords)
+			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
+		if (withAffix)
+			name = config.prefix + name + config.postfix;
+		return scrub(name);
+	}
+
+	function getNameOrPidFromTarget(target) {
+		//Sometimes used to get the real name (returnName), sometimes the pids.
+		var name;
+		if (config.showNodeNames) {
+			name = scrub(target);
+		} else {
+			name = getPidFromTarget(target);
+		}
+		return name;
+	}
+
+	function makeHSV(hue, sat, val) {
+		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
+	}
+
+	function passages() {
+		//Graph passages.
+		var subbuffer = [];
+
+		if (config.renumber && !config.showNodeNames) {
+			//Renumbering is complicated.  Start at start.
+			var i;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				if (storyObj.passages[i].pid == storyObj.startNode)
+					subbuffer = subbuffer.concat(passage(storyObj.passages[i],1));
+			}
+			var renumberPid = 2;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				var psgi = storyObj.passages[i];
+				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
+					subbuffer = subbuffer.concat(passage(psgi,renumberPid));
+					renumberPid++;
+				}
+			}
+		} else {
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				if (!storyObj.passages[i].omit)
+					subbuffer = subbuffer.concat(passage(storyObj.passages[i]));
+			}
+		}
+
+		return subbuffer;
+	}
+
+	function passage(passage,label) {
+		//Graph a single parsed passage, including links.
+		//Don't need to separate nodes from passages for GraphML.
+		var result = [];
+
+		if ((config.omitSpecialPassages && passage.special) || passage.omit)
+			return result;
+
+		var scrubbedNameOrPid = getNameOrPid(passage);
+		var styles = stylePassage(passage, label);
+
+		//Push the node itself and the styles (because it's always styled in some way).
+		result.push('<node id="' + passage.pid + '"><desc>' + scrubbedNameOrPid + '</desc></node>');
+		//result.push(styles.join(' '));
+		
+		//Push the link list.
+		var links = graphLinks(passage, scrubbedNameOrPid);
+		result = result.concat(links);
+
+		return result;
+	}
+
+	function stylePassage(passage, label) {
+		var styles = [];
+
+		var hue = 0;
+		var sat = 0;
+		var val = 1;
+		var pid = passage.pid;
+		var content = passage.content;
+		var tag = passage.theTag;
+
+		//Start with any special shape for the passage.
+		if (config.snowstick && passage.ssBookmark) {
+			styles.push("shape=note");
+		} else if (passage.trace) {
+			styles.push("shape=hexagon");
+		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.push("shape=doublecircle");
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.push("shape=egg");
+		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
+			styles.push("shape=diamond");
+		}
+
+		//Add fill and bold styles.
+		if (styles.length === 0 && passage.links.length === 0  && config.ends) {
+			//We are at a terminal passage that isn't already styled as the start or an end.
+			styles.push("style=\"filled,diagonals\"");
+		} else if (styles.length) {
+			styles.push("style=\"filled,bold\"");
+		}	else if (config.color != "bw") {
+			styles.push("style=filled");
+		}
+		
+		//Calculate color.
+		if (config.color == "length") {
+			//Graphviz supports HSV, so use it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
+			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
+		} else if (config.color == "tag" && tag) {
+			var indx = storyObj.tags.indexOf(tag);
+			if (indx > -1)
+				hue = config.palette[indx%26]; //color alphabet colors
+			styles.push("fillcolor=\"" + hue + "\"");
+			styles.push("fontcolor=\"" + config.paletteContrastColors[indx%26] + "\"");
+		} else if (config.color == "tag") {
+			//No fill for you!
+ 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
+			//Solid real leaves for clarity.
+			hue = config.paletteExceptions.leafHue;
+			styles.push("fillcolor=\"" + makeHSV(hue,0.90,0.50) + "\"");
+ 		} else if (config.snowstick && passage.ssLeaf) {
+			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.leafHue;
+			sat = passage.ssLeaf;
+			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+ 		} else if (passage.trace) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
+ 		} else if (config.snowstick && passage.ssRead) {
+			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.readHue;
+			sat = passage.ssRead;
+			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
+			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+		} else if (pid == storyObj.startNode) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.ends + "\"");
+		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.push("fillcolor=\"" + config.paletteExceptions.unreachable + "\"");
+ 		} else if (config.color == "tag") {
+			styles.push("fillcolor=\"" + config.paletteExceptions.untagged + "\"");
+ 		} else {
+			styles.push("fillcolor=\"" + config.paletteExceptions.default + "\"");
+		}
+
+		//Rename the node if a label or prefix was passed in.
+		if (label || config.prefix || config.postfix) {
+			if (label)
+				styles.push("label=\"" + config.prefix + label + config.postfix + "\"");
+			else
+				styles.push("label=" + getNameOrPid(passage, false, false, true));
+		}
+		
+		//Add a tooltip.
+		if (config.tooltips) {
+			styles.push("tooltip=" + getNameOrPid(passage, true, true));
+		}
+		return styles;
+	}
+
+	function scrub(name) {
+		//Put names into a legal dot format.
+		if (name) {
+			//New viz only needs the quote escaping.
+			name = name.toString().replace(/"/gm,"\\\"");
+			// add literal quotes for names in all cases.
+			name = '"' + name + '"';
+		}
+		return name;
+	}
+
+	function writeClusters(tagObject) {
+		var clusters = [];
+		var clusterIndex = 0;
+		for (var tag in tagObject) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
+				clusters.push("subgraph cluster_" + clusterIndex + " {");
+				clusters.push("label=" + scrub(tag));
+				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
+				clusters.push(tagObject[tag].map(getNameOrPidFromTarget).join(" \r\n"));
+				clusters.push("}\r\n");
+				clusterIndex++;
+			}
+		}
+		return clusters;
+	}
+	
+	function writeTagKey(story,settings) {
+		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
+		var tagName;
+		for (var t=0; t<story.tags.length; t++) {
+			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
+				tagName = scrub(storyObj.tags[t]);
+				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
+			}
+		}
+		tagKey.push("}");
+		
+		var startName = (settings.showNodeNames ? scrub(story.startNodeName) : story.startNode);
+
+		//Dot hackery: invisible graphing to keep things lined up.
+		for (t=0; t<story.tags.length; t++) {
+			if (!context.settings.isOmittedTag(story.tags[t]))
+				tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
+		}
+		return tagKey;
+	}
+
+})();
+
 context.graph = (function() {
 
 	return {
@@ -535,6 +820,7 @@ context.graph = (function() {
 		edit: edit,
 		saveDot: saveDot,
 		saveGML: saveGML,
+		saveGraphML: saveGraphML,
 		saveSvg: saveSvg,
 		scale: scale
 	};
@@ -568,6 +854,7 @@ context.graph = (function() {
 		//dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
 		
 		document.getElementById("gmlfile").value = context.gml.convert();
+		document.getElementById("graphmlfile").value = context.graphml.convert();
 
 		render(output);
 	}
@@ -590,6 +877,12 @@ context.graph = (function() {
 		var output = document.getElementById("gmlfile").value;
 		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
 		filesaver.saveAs(blob, "gml" + Date.now() + ".gml", true);
+ 	}
+
+	function saveGraphML() {
+		var output = document.getElementById("graphmlfile").value;
+		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
+		filesaver.saveAs(blob, "graphml" + Date.now() + ".xml", true);
  	}
 
 	function saveSvg() {
@@ -684,6 +977,7 @@ context.init = (function() {
 		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
 		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
 		document.getElementById("saveGMLButton").addEventListener('click', context.graph.saveGML, false);
+		document.getElementById("saveGraphMLButton").addEventListener('click', context.graph.saveGraphML, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
 
 		document.getElementById("scaleInput").addEventListener('change', function(){context.settings.scale();}, false);
@@ -692,6 +986,7 @@ context.init = (function() {
 
 		document.getElementById("dotHeader").addEventListener('click', function(){context.settings.toggle("dotSection");}, false);
 		document.getElementById("gmlHeader").addEventListener('click', function(){context.settings.toggle("gmlSection");}, false);
+		document.getElementById("graphmlHeader").addEventListener('click', function(){context.settings.toggle("graphmlSection");}, false);
 		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
 	}
 
