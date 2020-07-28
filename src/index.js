@@ -322,18 +322,8 @@ context.dot = (function() {
 	function scrub(name) {
 		//Put names into a legal dot format.
 		if (name) {
-			// dangerously scrubbing non-ascii characters for graphviz bug.
-			// the long regex is for emoji, from https://thekevinscott.com/emojis-in-javascript/
-			//Try new viz with noscrub, just the quote escaping.
-			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "_").replace(/[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c\ude32-\ude3a]|[\ud83c\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff]/g, "_");
-			/* 
-				//Another emoji-squashing method:
-			name = _.map(name.toString().split(""), function(chr) {
-				chrat = chr.charCodeAt(0);
-				// (chrat == 34 ? '\\\"' : chr)
-				return (chrat >= 32 && chrat <= 126 ? chr : "_");
-			}).join("");
-			*/
+			//New viz only needs the quote escaping.
+			name = name.toString().replace(/"/gm,"\\\"");
 			// add literal quotes for names in all cases.
 			name = '"' + name + '"';
 		}
@@ -392,7 +382,7 @@ context.gml = (function() {
 
 		buffer.push("graph [");
 		buffer.push("directed 1");
-		//Except for this id, the GML format appears to require integer IDs.
+		//The rather underspecified GML format appears to require integer IDs.
 		buffer.push("id " + (ifid ? ifid : storyObj.passages.length + 18));
 		//Push title.
 		buffer.push("label " + scrub(storyObj.title));
@@ -458,21 +448,6 @@ context.gml = (function() {
 		return scrub(name);
 	}
 
-	function getNameOrPidFromTarget(target) {
-		//Sometimes used to get the real name (returnName), sometimes the pids.
-		var name;
-		if (config.showNodeNames) {
-			name = scrub(target);
-		} else {
-			name = getPidFromTarget(target);
-		}
-		return name;
-	}
-
-	function makeHSV(hue, sat, val) {
-		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
-	}
-
 	function passages() {
 		//Graph passages.
 		var subbuffer = {nodes: [],edges: []};
@@ -520,7 +495,6 @@ context.gml = (function() {
 			return subbuffer;
 
 		var scrubbedNameOrPid = getNameOrPid(passage);
-		var styles = stylePassage(passage, label);
 
 		//Push the node itself and the styles (because it's always styled in some way).
 		var nodeBuffer = [];
@@ -529,7 +503,7 @@ context.gml = (function() {
 		nodeBuffer.push("node [");
 		nodeBuffer.push("\t" + "id " +  passage.pid);
 		nodeBuffer.push("\t" + "label " + scrubbedNameOrPid);
-		nodeBuffer.push("\t" + styles.join('\r\n\t\t'));
+		//In theory you can push all the styles, but in practice they upset apps that read GML.
 		nodeBuffer.push("]");
 		
 		subbuffer.node.push(nodeBuffer.join('\r\n\t'));
@@ -540,114 +514,11 @@ context.gml = (function() {
 		return subbuffer;
 	}
 
-	function stylePassage(passage, label) {
-		var styles = [];
-
-		var hue = 0;
-		var sat = 0;
-		var val = 1;
-		var pid = passage.pid;
-		var content = passage.content;
-		var tag = passage.theTag;
-
-		//Start with any special shape for the passage.
-		if (config.snowstick && passage.ssBookmark) {
-			styles.push("shape V");
-		} else if (passage.trace) {
-			styles.push("shape Hexagon");
-		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.push("shape Ellipse");
-		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.push("shape \"Round Rectangle\"");
-		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
-			styles.push("shape Diamond");
-		}
-
-		//Add fill and bold styles.
-		if (styles.length === 0 && passage.links.length === 0  && config.ends) {
-			//We are at a terminal passage that isn't already styled as the start or an end.
-			styles.push("style \"filled,diagonals\"");
-		} else if (styles.length) {
-			styles.push("style \"filled,bold\"");
-		}	else if (config.color != "bw") {
-			styles.push("style filled");
-		}
-		
-		//Calculate color.
-		if (config.color == "length") {
-			//Graphviz supports HSV, so use it to create a red-to-blue/green range
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
-			styles.push("fillcolor \"" + hue + ",0.66,0.85\"");
-		} else if (config.color == "tag" && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
-			styles.push("fillcolor \"" + hue + "\"");
-			styles.push("fontcolor \"" + config.paletteContrastColors[indx%26] + "\"");
-		} else if (config.color == "tag") {
-			//No fill for you!
- 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
-			//Solid real leaves for clarity.
-			hue = config.paletteExceptions.leafHue;
-			styles.push("fillcolor \"" + makeHSV(hue,0.90,0.50) + "\"");
- 		} else if (config.snowstick && passage.ssLeaf) {
-			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
-			//Use it to vary both saturation and value.
-			hue = config.paletteExceptions.leafHue;
-			sat = passage.ssLeaf;
-			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
-			styles.push("fillcolor \"" + makeHSV(hue,sat,val) + "\"");
- 		} else if (passage.trace) {
-			styles.push("fillcolor \"" + config.paletteExceptions.trace + "\"");
- 		} else if (config.snowstick && passage.ssRead) {
-			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
-			//Use it to vary both saturation and value.
-			hue = config.paletteExceptions.readHue;
-			sat = passage.ssRead;
-			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
-			styles.push("fillcolor \"" + makeHSV(hue,sat,val) + "\"");
-		} else if (pid == storyObj.startNode) {
-			styles.push("fillcolor \"" + config.paletteExceptions.start + "\"");
-		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.push("fillcolor \"" + config.paletteExceptions.ends + "\"");
-		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.push("fillcolor \"" + config.paletteExceptions.unreachable + "\"");
- 		} else if (config.color == "tag") {
-			styles.push("fillcolor \"" + config.paletteExceptions.untagged + "\"");
- 		} else {
-			styles.push("fillcolor \"" + config.paletteExceptions.default + "\"");
-		}
-
-		//Rename the node if a label or prefix was passed in.
-		if (label || config.prefix || config.postfix) {
-			if (label)
-				styles.push("label \"" + config.prefix + label + config.postfix + "\"");
-			else
-				styles.push("label " + getNameOrPid(passage, false, false, true));
-		}
-		
-		//Add a tooltip.
-		if (config.tooltips) {
-			styles.push("tooltip " + getNameOrPid(passage, true, true));
-		}
-		return styles;
-	}
-
 	function scrub(name) {
 		//Put names into a legal dot format.
 		if (name) {
-			// dangerously scrubbing non-ascii characters for graphviz bug.
-			// the long regex is for emoji, from https://thekevinscott.com/emojis-in-javascript/
-			//Try new viz with noscrub, just the quote escaping.
-			name = name.toString().replace(/"/gm,"\\\""); //.replace(/[^\x00-\x7F]/g, "_").replace(/[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|[\ud83c\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|[\ud83c\ude32-\ude3a]|[\ud83c\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff]/g, "_");
-			/* 
-				//Another emoji-squashing method:
-			name = _.map(name.toString().split(""), function(chr) {
-				chrat = chr.charCodeAt(0);
-				// (chrat == 34 ? '\\\"' : chr)
-				return (chrat >= 32 && chrat <= 126 ? chr : "_");
-			}).join("");
-			*/
+			//New viz only needs the quote escaping.
+			name = name.toString().replace(/"/gm,"\\\"");
 			// add literal quotes for names in all cases.
 			name = '"' + name + '"';
 		}
