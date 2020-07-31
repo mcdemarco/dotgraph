@@ -540,7 +540,9 @@ context.graphml = (function() {
 		var ifid = context.settings.ifid();
 
 		var header = '<?xml version="1.0" encoding="UTF-8"?>\r\n' + 
-				'<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">\r\n' + 
+				'<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd" xmlns:y="http://www.yworks.com/xml/yfiles-common/3.0" xmlns:x="http://www.yworks.com/xml/yfiles-common/markup/3.0" xmlns:yjs="http://www.yworks.com/xml/yfiles-for-html/2.0/xaml">\r\n' + 
+				'\t<key id="d4" for="node" attr.name="NodeLabels" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeLabels"/>\r\n' + 
+				'\t<key id="d7" for="node" attr.name="NodeStyle" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeStyle"/>\r\n' + 
 				'\t<graph id="' + (ifid ? ifid : storyObj.passages.length + 1800) + '" edgedefault="directed">\r\n\t\t';
 
 		buffer.push('<desc>' + storyObj.title + '</desc>');
@@ -615,7 +617,31 @@ context.graphml = (function() {
 	}
 
 	function makeHSV(hue, sat, val) {
+		//Just reformats to a string.
 		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
+	}
+
+	function makeRGB(h, s, v) {
+		//Converts HSV arguments to hexadecimal RGB format.
+		//based on https://stackoverflow.com/a/17243070/4965965
+    var r, g, b, i, f, p, q, t;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    r = Math.round(r * 255).toString(16);
+    g = Math.round(g * 255).toString(16);
+    b = Math.round(b * 255).toString(16);
+    return "#" + (r.length == 1 ? "0" : "") + r + (g.length == 1 ? "0" : "") + g + (b.length == 1 ? "0" : "") + b;
 	}
 
 	function passages() {
@@ -659,8 +685,10 @@ context.graphml = (function() {
 		var styles = stylePassage(passage, label);
 
 		//Push the node itself and the styles (because it's always styled in some way).
-		result.push('<node id="' + passage.pid + '"><desc>' + scrubbedNameOrPid + '</desc></node>');
-		//result.push(styles.join(' '));
+		result.push('<node id="' + passage.pid + '">');
+		//result.push('\t<desc>' + scrubbedNameOrPid + '</desc>');
+		result = result.concat(styles);
+		result.push('</node>');
 		
 		//Push the link list.
 		var links = graphLinks(passage, scrubbedNameOrPid);
@@ -678,20 +706,25 @@ context.graphml = (function() {
 		var pid = passage.pid;
 		var content = passage.content;
 		var tag = passage.theTag;
+		var shape;
+		var color, contrastColor;
 
 		//Start with any special shape for the passage.
 		if (config.snowstick && passage.ssBookmark) {
-			styles.push("shape=note");
+			shape = "TRAPEZ";
 		} else if (passage.trace) {
-			styles.push("shape=hexagon");
+			shape = "HEXAGON";
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.push("shape=doublecircle");
+			shape = "OCTAGON";
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.push("shape=egg");
+			shape = "ROUND_RECTANGLE";
 		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
-			styles.push("shape=diamond");
+			shape = "DIAMOND";
+		} else {
+			shape = "ELLIPSE";
 		}
 
+		/*
 		//Add fill and bold styles.
 		if (styles.length === 0 && passage.links.length === 0  && config.ends) {
 			//We are at a terminal passage that isn't already styled as the start or an end.
@@ -701,74 +734,98 @@ context.graphml = (function() {
 		}	else if (config.color != "bw") {
 			styles.push("style=filled");
 		}
-		
-		//Calculate color.
+		*/
+
+		contrastColor = "BLACK";
+		//Calculate color.  Omitted font colors for now but could use the stroke color?
 		if (config.color == "length") {
-			//Graphviz supports HSV, so use it to create a red-to-blue/green range
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
-			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
+			//Graphviz supported HSV, so used it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
+			color = makeRGB(hue,0.66,0.85);
 		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
 			if (indx > -1)
 				hue = config.palette[indx%26]; //color alphabet colors
-			styles.push("fillcolor=\"" + hue + "\"");
-			styles.push("fontcolor=\"" + config.paletteContrastColors[indx%26] + "\"");
+ 			color = hue;
+			contrastColor = config.paletteContrastColors[indx%26];
 		} else if (config.color == "tag") {
 			//No fill for you!
  		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
 			//Solid real leaves for clarity.
 			hue = config.paletteExceptions.leafHue;
-			styles.push("fillcolor=\"" + makeHSV(hue,0.90,0.50) + "\"");
+			color = makeRGB(hue,0.90,0.50);
  		} else if (config.snowstick && passage.ssLeaf) {
 			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
 			//Use it to vary both saturation and value.
 			hue = config.paletteExceptions.leafHue;
 			sat = passage.ssLeaf;
 			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
-			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+			color = makeRGB(hue,sat,val);
  		} else if (passage.trace) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.trace + "\"");
+			color = config.paletteExceptions.trace;
  		} else if (config.snowstick && passage.ssRead) {
 			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
 			//Use it to vary both saturation and value.
 			hue = config.paletteExceptions.readHue;
 			sat = passage.ssRead;
 			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
-			styles.push("fillcolor=\"" + makeHSV(hue,sat,val) + "\"");
+			color = makeRGB(hue,sat,val);
 		} else if (pid == storyObj.startNode) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.start + "\"");
+			color = config.paletteExceptions.start;
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.ends + "\"");
+			color = config.paletteExceptions.ends;
 		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.push("fillcolor=\"" + config.paletteExceptions.unreachable + "\"");
+			color = config.paletteExceptions.unreachable;
  		} else if (config.color == "tag") {
-			styles.push("fillcolor=\"" + config.paletteExceptions.untagged + "\"");
+			color = config.paletteExceptions.untagged;
  		} else {
-			styles.push("fillcolor=\"" + config.paletteExceptions.default + "\"");
+			color = config.paletteExceptions.default;
 		}
+
+		styles.push('\t<data key="d7">');
+		styles.push('\t\t<yjs:ShapeNodeStyle fill="' + color + '" shape="' + shape + '"/>');
+		styles.push('\t</data>');
 
 		//Rename the node if a label or prefix was passed in.
 		if (label || config.prefix || config.postfix) {
 			if (label)
-				styles.push("label=\"" + config.prefix + label + config.postfix + "\"");
+				label = config.prefix + label + config.postfix;
 			else
-				styles.push("label=" + getNameOrPid(passage, false, false, true));
-		}
-		
+				label = getNameOrPid(passage, false, false, true);
+		} else 
+			label = getNameOrPid(passage);
+
+		styles.push('\t<data key="d4">');
+		styles.push('\t\t<x:List>');
+		styles.push('\t\t\t<y:Label LayoutParameter="{x:Static y:InteriorLabelModel.Center}">');
+		styles.push('\t\t\t\t<y:Label.Text>' + label + '</y:Label.Text>');
+		styles.push('\t\t\t\t<y:Label.Style>');
+		//styles.push('\t\t\t\t\t<yjs:DefaultLabelStyle horizontalTextAlignment="CENTER" textFill="' + contrastColor + '" textSize="33"/>');
+		styles.push('\t\t\t\t\t<yjs:DefaultLabelStyle horizontalTextAlignment="CENTER" textFill="' + contrastColor + '"/>');
+		styles.push('\t\t\t\t</y:Label.Style>');
+		styles.push('\t\t\t</y:Label>');
+		styles.push('\t\t</x:List>');
+		styles.push('\t</data>');
+
+		/*
 		//Add a tooltip.
 		if (config.tooltips) {
 			styles.push("tooltip=" + getNameOrPid(passage, true, true));
 		}
+		*/
+
 		return styles;
 	}
 
 	function scrub(name) {
-		//Put names into a legal dot format.
+		//Put names into a legal xml format.
 		if (name) {
-			//New viz only needs the quote escaping.
-			name = name.toString().replace(/"/gm,"\\\"");
-			// add literal quotes for names in all cases.
-			name = '"' + name + '"';
+			name = name.toString()
+				.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
 		}
 		return name;
 	}
@@ -882,7 +939,7 @@ context.graph = (function() {
 	function saveGraphML() {
 		var output = document.getElementById("graphmlfile").value;
 		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "graphml" + Date.now() + ".xml", true);
+		filesaver.saveAs(blob, "graphml" + Date.now() + ".graphml", true);
  	}
 
 	function saveSvg() {
