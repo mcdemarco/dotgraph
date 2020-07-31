@@ -541,7 +541,9 @@ context.graphml = (function() {
 
 		var header = '<?xml version="1.0" encoding="UTF-8"?>\r\n' + 
 				'<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd" xmlns:y="http://www.yworks.com/xml/yfiles-common/3.0" xmlns:x="http://www.yworks.com/xml/yfiles-common/markup/3.0" xmlns:yjs="http://www.yworks.com/xml/yfiles-for-html/2.0/xaml">\r\n' + 
+				'\t<key id="g4" for="node" attr.name="label"/>\r\n' + 
 				'\t<key id="d4" for="node" attr.name="NodeLabels" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeLabels"/>\r\n' + 
+				'\t<key id="g7" for="node" attr.name="color"/>\r\n' + 
 				'\t<key id="d7" for="node" attr.name="NodeStyle" y:attr.uri="http://www.yworks.com/xml/yfiles-common/2.0/NodeStyle"/>\r\n' + 
 				'\t<graph id="' + (ifid ? ifid : storyObj.passages.length + 1800) + '" edgedefault="directed">\r\n\t\t';
 
@@ -782,6 +784,8 @@ context.graphml = (function() {
 			color = config.paletteExceptions.default;
 		}
 
+		styles.push('\t<data key="g7">' + color + '</data>');
+		//The yEd version.
 		styles.push('\t<data key="d7">');
 		styles.push('\t\t<yjs:ShapeNodeStyle fill="' + color + '" shape="' + shape + '"/>');
 		styles.push('\t</data>');
@@ -795,6 +799,8 @@ context.graphml = (function() {
 		} else 
 			label = getNameOrPid(passage);
 
+		styles.push('\t<data key="g4">' + label + '</data>');
+		//The yEd version.
 		styles.push('\t<data key="d4">');
 		styles.push('\t\t<x:List>');
 		styles.push('\t\t\t<y:Label LayoutParameter="{x:Static y:InteriorLabelModel.Center}">');
