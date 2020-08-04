@@ -86,9 +86,9 @@ var dotGraph = {};
 	var viz = new Viz();
 
 //dot
-//json
 //gml
 //graphml
+//json
 //graph
 //init
 //passage
@@ -136,19 +136,6 @@ context.dot = (function() {
 			return scrub(target);
 	}	
 
-	function graphLinks(passage, nameOrPid) {
-		var linkGraph = [];
-
-		for (var l = 0; l < passage.links.length; l++) {
-			var target = passage.links[l][0];
-			var linkForGraph = nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getPidFromTarget(target));
-			if (passage.links[l][1])
-				linkForGraph += " [style = dashed]";
-			linkGraph.push(linkForGraph);
-		}
-		return linkGraph;
-	}
-
 	function getNameOrPid(passage, reversed, withCount, withAffix) {
 		//Used to get the node label in the style requested by the settings, 
 		//except in tooltips, where we give the alternate label and a word count.
@@ -176,6 +163,19 @@ context.dot = (function() {
 			name = getPidFromTarget(target);
 		}
 		return name;
+	}
+
+	function graphLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l][0];
+			var linkForGraph = nameOrPid + " -> " + (config.showNodeNames ? scrub(target) : getPidFromTarget(target));
+			if (passage.links[l][1])
+				linkForGraph += " [style = dashed]";
+			linkGraph.push(linkForGraph);
+		}
+		return linkGraph;
 	}
 
 	function makeHSV(hue, sat, val) {
@@ -418,23 +418,6 @@ context.gml = (function() {
 			return scrub(target);
 	}	
 
-	function graphLinks(passage, nameOrPid) {
-		var linkGraph = [];
-
-		for (var l = 0; l < passage.links.length; l++) {
-			var target = passage.links[l][0];
-			var linkForGraph = ((passage.pid != storyObj.startNode || l > 0) ? "\t" : "") + 
-					"edge [\r\n\t\t" + "source " + passage.pid + 
-					"\r\n\t\t" + "target " + getPidFromTarget(target);
-			if (passage.links[l][1])
-				linkForGraph += " \r\n\t\t" + "label display";
-
-			linkForGraph += "\r\n\t]";
-			linkGraph.push(linkForGraph);
-		}
-		return linkGraph;
-	}
-
 	function getNameOrPid(passage, reversed, withCount, withAffix) {
 		//Used to get the node label in the style requested by the settings, 
 		//except in tooltips, where we give the alternate label and a word count.
@@ -451,6 +434,23 @@ context.gml = (function() {
 		if (withAffix)
 			name = config.prefix + name + config.postfix;
 		return scrub(name);
+	}
+
+	function graphLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l][0];
+			var linkForGraph = ((passage.pid != storyObj.startNode || l > 0) ? "\t" : "") + 
+					"edge [\r\n\t\t" + "source " + passage.pid + 
+					"\r\n\t\t" + "target " + getPidFromTarget(target);
+			if (passage.links[l][1])
+				linkForGraph += " \r\n\t\t" + "label display";
+
+			linkForGraph += "\r\n\t]";
+			linkGraph.push(linkForGraph);
+		}
+		return linkGraph;
 	}
 
 	function passages() {
@@ -532,267 +532,6 @@ context.gml = (function() {
 
 })();
 
-context.json = (function() {
-
-	return {
-		convert: convert
-	};
-
-	function convert() {
-		//Return json for the graph.
-
-		//d3.js force-directed graph format is pretty lightweight, so save some info in a comment.
-		var comment = [scrub(storyObj.title)];
-		var ifid = context.settings.ifid();
-		if (ifid)
-			comment.push("IFID: " + ifid);
-
-		if (config.cluster) {
-			//no clustering in d3?
-		}
-		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
-			//no obvious way to write the tags, not that it was so obvious for dot either.
-		}
-		
-		//The main part of the graph is the passage graphing, including links.
-		var result = passages();
-
-		return "/*\r\n" + comment.join("\r\n") + "\r\n*/\r\n" + JSON.stringify(result, null, '\t');
-	}
-
-	//private
-
-	function getPidFromTarget(target) {
-		if (storyObj.targets.hasOwnProperty(target))
-			return storyObj.targets[target];
-		else
-			return scrub(target);
-	}	
-
-	function graphLinks(passage, nameOrPid) {
-		var linkGraph = [];
-
-		for (var l = 0; l < passage.links.length; l++) {
-			var target = passage.links[l][0];
-			var linkForGraph = {
-				source:  passage.pid,
-				target: getPidFromTarget(target)
-			}
-			if (passage.links[l][1])
-				linkForGraph.category = "display link";
-
-			linkGraph.push(linkForGraph);
-		}
-		return linkGraph;
-	}
-
-	function getNameOrPid(passage, reversed, withCount, withAffix) {
-		//Used to get the node label in the style requested by the settings, 
-		//except in tooltips, where we give the alternate label and a word count.
-		var name;
-		var returnAsName = (reversed ? !config.showNodeNames : config.showNodeNames);
-
-		if (returnAsName) {
-			name = passage.name;
-		} else {
-			name = passage.pid ? passage.pid : "Untitled Passage";
-		}
-		if (withCount && config.countWords)
-			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
-		if (withAffix)
-			name = config.prefix + name + config.postfix;
-		return scrub(name);
-	}
-
-	function makeHSV(hue, sat, val) {
-		//Just reformats to a string.
-		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
-	}
-
-	function makeRGB(h, s, v) {
-		//Converts HSV arguments to hexadecimal RGB format.
-		//based on https://stackoverflow.com/a/17243070/4965965
-    var r, g, b, i, f, p, q, t;
-    i = Math.floor(h * 6);
-    f = h * 6 - i;
-    p = v * (1 - s);
-    q = v * (1 - f * s);
-    t = v * (1 - (1 - f) * s);
-    switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
-    }
-    r = Math.round(r * 255).toString(16);
-    g = Math.round(g * 255).toString(16);
-    b = Math.round(b * 255).toString(16);
-    return "#" + (r.length == 1 ? "0" : "") + r + (g.length == 1 ? "0" : "") + g + (b.length == 1 ? "0" : "") + b;
-	}
-
-	function passages() {
-		//Graph passages.
-		var subbuffer = {
-			nodes: [],
-			links: []
-		};
-
-		var result;
-		if (config.renumber && !config.showNodeNames) {
-			//Renumbering is complicated.  Start at start.
-			var i;
-			for (i = 0; i < storyObj.passages.length; ++i) {
-				if (storyObj.passages[i].pid == storyObj.startNode) {
-					result = passage(storyObj.passages[i],1);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.links.concat(result.links);
-				}
-			}
-			var renumberPid = 2;
-			for (i = 0; i < storyObj.passages.length; ++i) {
-				var psgi = storyObj.passages[i];
-				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
-					result = passage(psgi,renumberPid);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.links.concat(result.links);
-					renumberPid++;
-				}
-			}
-		} else {
-			for (i = 0; i < storyObj.passages.length; ++i) {
-				if (!storyObj.passages[i].omit) {
-					result = passage(storyObj.passages[i]);
-					subbuffer.nodes = subbuffer.nodes.concat(result.node);
-					subbuffer.links = subbuffer.links.concat(result.links);
-				}
-			}
-		}
-
-		return subbuffer;
-	}
-
-	function passage(passage,label) {
-		//Graph a single parsed passage, including links.
-		//As with GML, return the nodes separate from the edges.
-
-		var subbuffer = {node: [], links: []};
-
-		if ((config.omitSpecialPassages && passage.special) || passage.omit)
-			return subbuffer;
-
-		var scrubbedNameOrPid = getNameOrPid(passage);
-		var styles = stylePassage(passage,label);
-
-		//Push the node itself and the styles (because it's always styled in some way).
-		var node = {
-			id:  passage.pid,
-			name:  scrubbedNameOrPid
-		}
-/*		for (var key in styles) {
-			if (styles.hasOwnProperty(key))
-				node[key] = styles[key];
-		}
-*/
-		subbuffer.node.push(node);
-
-		//Push the link list.
-		subbuffer.links = graphLinks(passage, scrubbedNameOrPid);
-
-		return subbuffer;
-	}
-
-	function stylePassage(passage, label) {
-		var styles = {contrastColor: "black"};
-
-		var hue = 0;
-		var sat = 0;
-		var val = 1;
-		var pid = passage.pid;
-		var content = passage.content;
-		var tag = passage.theTag;
-		var color, contrastColor;
-
-		//Start with any special shape for the passage.
-		if (config.snowstick && passage.ssBookmark) {
-			styles.shape = "TRAPEZ";
-		} else if (passage.trace) {
-			styles.shape = "HEXAGON";
-		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.shape = "OCTAGON";
-		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.shape = "ROUND_RECTANGLE";
-		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
-			styles.shape = "DIAMOND";
-		} else {
-			styles.shape = "ELLIPSE";
-		}
-
-		contrastColor = "BLACK";
-		//Calculate color.  Omitted font colors for now but could use the stroke color?
-		if (config.color == "length") {
-			//Graphviz supported HSV, so used it to create a red-to-blue/green range
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
-			styles.color = makeRGB(hue,0.66,0.85);
-		} else if (config.color == "tag" && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
- 			styles.color = hue;
-			styles.contrastColor = config.paletteContrastColors[indx%26];
-		} else if (config.color == "tag") {
-			//No fill for you!
- 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
-			//Solid real leaves for clarity.
-			hue = config.paletteExceptions.leafHue;
-			styles.color = makeRGB(hue,0.90,0.50);
- 		} else if (config.snowstick && passage.ssLeaf) {
-			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
-			//Use it to vary both saturation and value.
-			hue = config.paletteExceptions.leafHue;
-			sat = passage.ssLeaf;
-			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
-			styles.color = makeRGB(hue,sat,val);
- 		} else if (passage.trace) {
-			styles.color = config.paletteExceptions.trace;
- 		} else if (config.snowstick && passage.ssRead) {
-			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
-			//Use it to vary both saturation and value.
-			hue = config.paletteExceptions.readHue;
-			sat = passage.ssRead;
-			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
-			styles.color = makeRGB(hue,sat,val);
-		} else if (pid == storyObj.startNode) {
-			styles.color = config.paletteExceptions.start;
-		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.color = config.paletteExceptions.ends;
-		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.color = config.paletteExceptions.unreachable;
- 		} else if (config.color == "tag") {
-			styles.color = config.paletteExceptions.untagged;
- 		} else {
-			styles.color = config.paletteExceptions.default;
-		}
-
-		if (label || config.prefix || config.postfix) {
-			if (label)
-				styles.label = config.prefix + label + config.postfix;
-			else
-				styles.label = getNameOrPid(passage, false, false, true);
-		} else 
-			styles.label = getNameOrPid(passage);
-
-		return styles;
-	}
-
-	function scrub(name) {
-		//JSON.stringify should handle any name issues.
-		return name;
-	}
-
-})();
-
 context.graphml = (function() {
 
 	return {
@@ -800,7 +539,7 @@ context.graphml = (function() {
 	};
 
 	function convert() {
-		//Return the dot graph source.
+		//Return the graphml source.
 		var buffer = [];
 		var ifid = context.settings.ifid();
 
@@ -814,14 +553,7 @@ context.graphml = (function() {
 
 		buffer.push('<desc>' + storyObj.title + '</desc>');
 
-		/* also no way to cluster?
-		if (config.cluster) {
-			buffer = buffer.concat(writeClusters(storyObj.tagObject));
-		}
-		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
-			buffer = buffer.concat(writeTagKey(storyObj,config));
-		}
-		*/
+		//also no way to cluster?
 
 		//The main part of the graph is the passage graphing, including links.
 		buffer = buffer.concat(passages());
@@ -839,20 +571,6 @@ context.graphml = (function() {
 		else
 			return scrub(target);
 	}	
-
-	function graphLinks(passage, nameOrPid) {
-		var linkGraph = [];
-
-		for (var l = 0; l < passage.links.length; l++) {
-			var target = passage.links[l][0];
-			var linkForGraph = '<edge source="' + passage.pid + '" target="' + getPidFromTarget(target) + '">';
-			if (passage.links[l][1])
-				linkForGraph += '<desc>display link</desc>';
-			linkForGraph += '</edge>';
-			linkGraph.push(linkForGraph);
-		}
-		return linkGraph;
-	}
 
 	function getNameOrPid(passage, reversed, withCount, withAffix) {
 		//Used to get the node label in the style requested by the settings, 
@@ -881,6 +599,20 @@ context.graphml = (function() {
 			name = getPidFromTarget(target);
 		}
 		return name;
+	}
+
+	function graphLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l][0];
+			var linkForGraph = '<edge source="' + passage.pid + '" target="' + getPidFromTarget(target) + '">';
+			if (passage.links[l][1])
+				linkForGraph += '<desc>display link</desc>';
+			linkForGraph += '</edge>';
+			linkGraph.push(linkForGraph);
+		}
+		return linkGraph;
 	}
 
 	function makeHSV(hue, sat, val) {
@@ -991,17 +723,7 @@ context.graphml = (function() {
 			shape = "ELLIPSE";
 		}
 
-		/*
-		//Add fill and bold styles.
-		if (styles.length === 0 && passage.links.length === 0  && config.ends) {
-			//We are at a terminal passage that isn't already styled as the start or an end.
-			styles.push("style=\"filled,diagonals\"");
-		} else if (styles.length) {
-			styles.push("style=\"filled,bold\"");
-		}	else if (config.color != "bw") {
-			styles.push("style=filled");
-		}
-		*/
+		//Add fill and bold styles omitted.
 
 		contrastColor = "BLACK";
 		//Calculate color.  Omitted font colors for now but could use the stroke color?
@@ -1078,12 +800,7 @@ context.graphml = (function() {
 		styles.push('\t\t</x:List>');
 		styles.push('\t</data>');
 
-		/*
-		//Add a tooltip.
-		if (config.tooltips) {
-			styles.push("tooltip=" + getNameOrPid(passage, true, true));
-		}
-		*/
+		//Add a tooltip omitted.
 
 		return styles;
 	}
@@ -1136,6 +853,310 @@ context.graphml = (function() {
 				tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
 		}
 		return tagKey;
+	}
+
+})();
+
+context.json = (function() {
+
+	return {
+		convert: convert
+	};
+
+	function convert() {
+		//Return json for the graph.
+
+		//d3.js force-directed graph format is pretty lightweight, so some info is just omitted.
+		/*
+		var comment = [scrub(storyObj.title)];
+		var ifid = context.settings.ifid();
+		if (ifid)
+			comment.push("IFID: " + ifid);
+		*/
+
+		var clusters;
+		if (config.cluster) {
+			//Supplemental cluster list, but clusters are also indicated on nodes.
+			clusters = writeClusters(storyObj.tagObject);
+		}
+
+		//The main part of the graph is the passage graphing, including links.
+		var result = passages(clusters);
+
+		if (clusters) {
+			//Add supplemental cluster list to output.
+			result.clusters = clusters;
+		}
+		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
+			//no obvious way to write the tags, not that it was so obvious for dot either.
+		}
+
+		//return "/*\r\n" + comment.join("\r\n") + "\r\n*/\r\n" + JSON.stringify(result, null, '\t');
+		return JSON.stringify(result, null, '\t');
+	}
+
+	//private
+
+	function getClusterFromTags(tags,clusters) {
+		//Return appropriate clusterId for a tag list.
+		
+	}
+
+	function getPidFromTarget(target) {
+		if (storyObj.targets.hasOwnProperty(target))
+			return storyObj.targets[target];
+		else
+			return scrub(target);
+	}
+
+	function getNameOrPid(passage, reversed, withCount, withAffix) {
+		//Used to get the node label in the style requested by the settings, 
+		//except in tooltips, where we give the alternate label and a word count.
+		var name;
+		var returnAsName = (reversed ? !config.showNodeNames : config.showNodeNames);
+
+		if (returnAsName) {
+			name = passage.name;
+		} else {
+			name = passage.pid ? passage.pid : "Untitled Passage";
+		}
+		if (withCount && config.countWords)
+			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
+		if (withAffix)
+			name = config.prefix + name + config.postfix;
+		return scrub(name);
+	}
+
+	function graphLinks(passage, nameOrPid) {
+		var linkGraph = [];
+
+		for (var l = 0; l < passage.links.length; l++) {
+			var target = passage.links[l][0];
+			var linkForGraph = {
+				source:  passage.pid,
+				target: getPidFromTarget(target)
+			}
+			if (passage.links[l][1])
+				linkForGraph.category = "display link";
+
+			linkGraph.push(linkForGraph);
+		}
+		return linkGraph;
+	}
+
+	function makeHSV(hue, sat, val) {
+		//Just reformats to a string.
+		return hue.toFixed(2) + "," + sat.toFixed(2) + "," + val.toFixed(2);
+	}
+
+	function makeRGB(h, s, v) {
+		//Converts HSV arguments to hexadecimal RGB format.
+		//based on https://stackoverflow.com/a/17243070/4965965
+    var r, g, b, i, f, p, q, t;
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    r = Math.round(r * 255).toString(16);
+    g = Math.round(g * 255).toString(16);
+    b = Math.round(b * 255).toString(16);
+    return "#" + (r.length == 1 ? "0" : "") + r + (g.length == 1 ? "0" : "") + g + (b.length == 1 ? "0" : "") + b;
+	}
+
+	function passages(clusters) {
+		//Graph passages.
+		var subbuffer = {
+			nodes: [],
+			links: []
+		};
+
+		var result;
+		if (config.renumber && !config.showNodeNames) {
+			//Renumbering is complicated.  Start at start.
+			var i;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				if (storyObj.passages[i].pid == storyObj.startNode) {
+					result = passage(storyObj.passages[i],1,clusters);
+					subbuffer.nodes.concat(result.node);
+					subbuffer.links.concat(result.links);
+				}
+			}
+			var renumberPid = 2;
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				var psgi = storyObj.passages[i];
+				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
+					result = passage(psgi,renumberPid,clusters);
+					subbuffer.nodes.concat(result.node);
+					subbuffer.links.concat(result.links);
+					renumberPid++;
+				}
+			}
+		} else {
+			for (i = 0; i < storyObj.passages.length; ++i) {
+				if (!storyObj.passages[i].omit) {
+					result = passage(storyObj.passages[i],null,clusters);
+					subbuffer.nodes = subbuffer.nodes.concat(result.node);
+					subbuffer.links = subbuffer.links.concat(result.links);
+				}
+			}
+		}
+
+		return subbuffer;
+	}
+
+	function passage(passage,label,clusters) {
+		//Graph a single parsed passage, including links.
+		//As with GML, return the nodes separate from the edges.
+
+		var subbuffer = {node: [], links: []};
+
+		if ((config.omitSpecialPassages && passage.special) || passage.omit)
+			return subbuffer;
+
+		var scrubbedNameOrPid = getNameOrPid(passage);
+		var styles = stylePassage(passage,label);
+
+		//Push the node itself and the styles (because it's always styled in some way).
+		var node = {
+			id:  passage.pid,
+			name:  scrubbedNameOrPid
+		}
+
+		for (var key in styles) {
+			if (styles.hasOwnProperty(key))
+				node[key] = styles[key];
+		}
+
+		if (config.cluster) {
+			//Clustering is actually simpler in dagre.
+			var clusterId = getClusterFromTags(passage.tagArray,clusters);
+			if (clusterId)
+				node.cluster = clusterId;
+		}
+
+		subbuffer.node.push(node);
+
+		//Push the link list.
+		subbuffer.links = graphLinks(passage, scrubbedNameOrPid);
+
+		return subbuffer;
+	}
+
+	function stylePassage(passage, label) {
+		var styles = {contrastColor: "black"};
+
+		var hue = 0;
+		var sat = 0;
+		var val = 1;
+		var pid = passage.pid;
+		var content = passage.content;
+		var tag = passage.theTag;
+		var color, contrastColor;
+
+		//Start with any special shape for the passage.
+		if (config.snowstick && passage.ssBookmark) {
+			styles.shape = "TRAPEZ";
+		} else if (passage.trace) {
+			styles.shape = "HEXAGON";
+		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.shape = "OCTAGON";
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.shape = "ROUND_RECTANGLE";
+		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
+			styles.shape = "DIAMOND";
+		} else {
+			styles.shape = "ELLIPSE";
+		}
+
+		contrastColor = "BLACK";
+		//Calculate color.  Omitted font colors for now but could use the stroke color?
+		if (config.color == "length") {
+			//Graphviz supported HSV, so used it to create a red-to-blue/green range
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
+			styles.color = makeRGB(hue,0.66,0.85);
+		} else if (config.color == "tag" && tag) {
+			var indx = storyObj.tags.indexOf(tag);
+			if (indx > -1)
+				hue = config.palette[indx%26]; //color alphabet colors
+ 			styles.color = hue;
+			styles.contrastColor = config.paletteContrastColors[indx%26];
+		} else if (config.color == "tag") {
+			//No fill for you!
+ 		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
+			//Solid real leaves for clarity.
+			hue = config.paletteExceptions.leafHue;
+			styles.color = makeRGB(hue,0.90,0.50);
+ 		} else if (config.snowstick && passage.ssLeaf) {
+			//ssLeaf has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.leafHue;
+			sat = passage.ssLeaf;
+			val = Math.round(100 * passage.ssLeaf / 5) / 100 + 0.50;  //Darker value range.
+			styles.color = makeRGB(hue,sat,val);
+ 		} else if (passage.trace) {
+			styles.color = config.paletteExceptions.trace;
+ 		} else if (config.snowstick && passage.ssRead) {
+			//ssRead has been set to a fraction representing how recently it was read (0 for unread).
+			//Use it to vary both saturation and value.
+			hue = config.paletteExceptions.readHue;
+			sat = passage.ssRead;
+			val = Math.round(100 * passage.ssRead / 5) / 100 + 0.79;  //Lighter value range.
+			styles.color = makeRGB(hue,sat,val);
+		} else if (pid == storyObj.startNode) {
+			styles.color = config.paletteExceptions.start;
+		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
+			styles.color = config.paletteExceptions.ends;
+		} else if (_.find(storyObj.unreachable, function(str){return str == passage.name;})) {
+			styles.color = config.paletteExceptions.unreachable;
+ 		} else if (config.color == "tag") {
+			styles.color = config.paletteExceptions.untagged;
+ 		} else {
+			styles.color = config.paletteExceptions.default;
+		}
+
+		if (label || config.prefix || config.postfix) {
+			if (label)
+				styles.label = config.prefix + label + config.postfix;
+			else
+				styles.label = getNameOrPid(passage, false, false, true);
+		} else 
+			styles.label = getNameOrPid(passage);
+
+		return styles;
+	}
+
+	function scrub(name) {
+		//JSON.stringify should handle any name issues.
+		return name;
+	}
+
+	function writeClusters(tagObject) {
+		var clusters = [];
+		var clusterIndex = 0;
+		var cluster;
+
+		for (var tag in tagObject) {
+			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
+				cluster = {
+					id: "c" + clusterIndex,
+					name: scrub(tag),
+					color: config.palette[clusterIndex%26],
+					contrastColor: config.paletteContrastColors[clusterIndex%26]
+				};
+				clusters.push(cluster);
+				clusterIndex++;
+			}
+		}
+		return clusters;
 	}
 
 })();
