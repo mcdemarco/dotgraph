@@ -818,43 +818,6 @@ context.graphml = (function() {
 		return name;
 	}
 
-	function writeClusters(tagObject) {
-		var clusters = [];
-		var clusterIndex = 0;
-		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
-				clusters.push("subgraph cluster_" + clusterIndex + " {");
-				clusters.push("label=" + scrub(tag));
-				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
-				clusters.push(tagObject[tag].map(getNameOrPidFromTarget).join(" \r\n"));
-				clusters.push("}\r\n");
-				clusterIndex++;
-			}
-		}
-		return clusters;
-	}
-	
-	function writeTagKey(story,settings) {
-		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
-		var tagName;
-		for (var t=0; t<story.tags.length; t++) {
-			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
-				tagName = scrub(storyObj.tags[t]);
-				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
-			}
-		}
-		tagKey.push("}");
-		
-		var startName = (settings.showNodeNames ? scrub(story.startNodeName) : story.startNode);
-
-		//Dot hackery: invisible graphing to keep things lined up.
-		for (t=0; t<story.tags.length; t++) {
-			if (!context.settings.isOmittedTag(story.tags[t]))
-				tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
-		}
-		return tagKey;
-	}
-
 })();
 
 context.json = (function() {
@@ -866,15 +829,7 @@ context.json = (function() {
 	function convert() {
 		//Return json for the graph.
 
-		//d3.js force-directed graph format is pretty lightweight, so some info is just omitted.
-		/*
-		var comment = [scrub(storyObj.title)];
-		var ifid = context.settings.ifid();
-		if (ifid)
-			comment.push("IFID: " + ifid);
-		*/
-
-		var clusters;
+		var clusters = [];
 		if (config.cluster) {
 			//Supplemental cluster list, but clusters are also indicated on nodes.
 			clusters = writeClusters(storyObj.tagObject);
@@ -883,23 +838,37 @@ context.json = (function() {
 		//The main part of the graph is the passage graphing, including links.
 		var result = passages(clusters);
 
-		if (clusters) {
+		if (clusters.length > 0) {
 			//Add supplemental cluster list to output.
 			result.clusters = clusters;
 		}
-		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
-			//no obvious way to write the tags, not that it was so obvious for dot either.
-		}
 
-		//return "/*\r\n" + comment.join("\r\n") + "\r\n*/\r\n" + JSON.stringify(result, null, '\t');
+		//Don't attempt to write out tags.
+
+		//d3.js force-directed graph format is pretty lightweight, so some info is just hacked in here at the end.
+		result.settings = {
+			title: scrub(storyObj.title)
+		}
+		var ifid = context.settings.ifid();
+		if (ifid)
+			result.settings.ifid = ifid;
+		if (config.engine == "dot")
+			result.settings.rankdir = config.rotation;
+
 		return JSON.stringify(result, null, '\t');
 	}
 
 	//private
 
-	function getClusterFromTags(tags,clusters) {
+	function getClusterFromTags(tags,clusterKey) {
 		//Return appropriate clusterId for a tag list.
-		
+		for (var t = 0; t < tags.length; t++) {
+			var tag = tags[t];
+			if (clusterKey.hasOwnProperty(tag)) {
+				return clusterKey[tag];
+			}
+		}
+		return null;
 	}
 
 	function getPidFromTarget(target) {
@@ -979,13 +948,20 @@ context.json = (function() {
 			links: []
 		};
 
+		//Make a cluster key.
+		var clusterKey = {};
+		for (var c = 0; c < clusters.length; c++) {
+			var cluster = clusters[c];
+			clusterKey[cluster.name] = cluster.id;
+		}
+
 		var result;
 		if (config.renumber && !config.showNodeNames) {
 			//Renumbering is complicated.  Start at start.
 			var i;
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				if (storyObj.passages[i].pid == storyObj.startNode) {
-					result = passage(storyObj.passages[i],1,clusters);
+					result = passage(storyObj.passages[i],1,clusterKey);
 					subbuffer.nodes.concat(result.node);
 					subbuffer.links.concat(result.links);
 				}
@@ -994,7 +970,7 @@ context.json = (function() {
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				var psgi = storyObj.passages[i];
 				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
-					result = passage(psgi,renumberPid,clusters);
+					result = passage(psgi,renumberPid,clusterKey);
 					subbuffer.nodes.concat(result.node);
 					subbuffer.links.concat(result.links);
 					renumberPid++;
@@ -1003,7 +979,7 @@ context.json = (function() {
 		} else {
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				if (!storyObj.passages[i].omit) {
-					result = passage(storyObj.passages[i],null,clusters);
+					result = passage(storyObj.passages[i],null,clusterKey);
 					subbuffer.nodes = subbuffer.nodes.concat(result.node);
 					subbuffer.links = subbuffer.links.concat(result.links);
 				}
@@ -1013,7 +989,7 @@ context.json = (function() {
 		return subbuffer;
 	}
 
-	function passage(passage,label,clusters) {
+	function passage(passage,label,clusterKey) {
 		//Graph a single parsed passage, including links.
 		//As with GML, return the nodes separate from the edges.
 
@@ -1038,7 +1014,7 @@ context.json = (function() {
 
 		if (config.cluster) {
 			//Clustering is actually simpler in dagre.
-			var clusterId = getClusterFromTags(passage.tagArray,clusters);
+			var clusterId = getClusterFromTags(passage.tagArray,clusterKey);
 			if (clusterId)
 				node.cluster = clusterId;
 		}
