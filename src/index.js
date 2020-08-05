@@ -34,6 +34,7 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: "100%",
 								showNodeNames: false,
+								showTagKey: "default",
 								snowstick: false,
 								snowstickObj: {},
 								tooltips: true,
@@ -111,7 +112,7 @@ context.dot = (function() {
 		if (config.cluster) {
 			buffer = buffer.concat(writeClusters(storyObj.tagObject));
 		}
-		if (config.color == "tag" && storyObj.tags.length != config.clusterTags.length) {
+		if ((config.color == "tag" && storyObj.tags.length != config.clusterTags.length && config.showTagKey == "default") || config.showTagKey == "always") {
 			buffer = buffer.concat(writeTagKey(storyObj,config));
 		}
 		
@@ -353,11 +354,12 @@ context.dot = (function() {
 	
 	function writeTagKey(story,settings) {
 		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
-		var tagName;
+		var tagName, tagId;
 		for (var t=0; t<story.tags.length; t++) {
 			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
 				tagName = scrub(storyObj.tags[t]);
-				tagKey.push(tagName + " [shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
+				tagId = "tagKeyNodeID_" + t;
+				tagKey.push(tagId +  " [label=" + tagName + " shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
 			}
 		}
 		tagKey.push("}");
@@ -367,7 +369,8 @@ context.dot = (function() {
 		//Dot hackery: invisible graphing to keep things lined up.
 		for (t=0; t<story.tags.length; t++) {
 			if (!context.settings.isOmittedTag(story.tags[t]))
-				tagKey.push(scrub(story.tags[t]) + " -> " + startName + " [style=invis]");
+				tagId = "tagKeyNodeID_" + t;
+				tagKey.push(tagId + " -> " + startName + " [style=invis]");
 		}
 		return tagKey;
 	}
