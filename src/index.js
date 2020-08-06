@@ -916,7 +916,7 @@ context.json = (function() {
 				target: getPidFromTarget(target)
 			}
 			if (passage.links[l][1])
-				linkForGraph.category = "display link";
+				linkForGraph.category = "display";
 
 			linkGraph.push(linkForGraph);
 		}
@@ -1050,17 +1050,17 @@ context.json = (function() {
 
 		//Start with any special shape for the passage.
 		if (config.snowstick && passage.ssBookmark) {
-			styles.shape = "TRAPEZ";
+			styles.shape = "rect";
 		} else if (passage.trace) {
-			styles.shape = "HEXAGON";
+			styles.shape = "circle";
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
-			styles.shape = "OCTAGON";
+			styles.shape = "circle";
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
-			styles.shape = "ROUND_RECTANGLE";
+			styles.shape = "rect";
 		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
-			styles.shape = "DIAMOND";
+			styles.shape = "diamond";
 		} else {
-			styles.shape = "ELLIPSE";
+			styles.shape = "ellipse";
 		}
 
 		contrastColor = "BLACK";
