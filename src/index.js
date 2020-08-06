@@ -353,7 +353,13 @@ context.dot = (function() {
 	}
 	
 	function writeTagKey(story,settings) {
-		var tagKey = ["{rank=source\r\nstyle=\"rounded, filled\""];
+		//Converted to cluster for clarity.
+		var tagKey = []
+		tagKey.push("subgraph cluster_tagKey {");
+		tagKey.push("label=\"Tags\"");
+		tagKey.push("style=\"rounded, filled\" fillcolor=\"white\"");
+		tagKey.push("rank=same");
+
 		var tagName, tagId;
 		for (var t=0; t<story.tags.length; t++) {
 			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
@@ -372,6 +378,7 @@ context.dot = (function() {
 				tagId = "tagKeyNodeID_" + t;
 				tagKey.push(tagId + " -> " + startName + " [style=invis]");
 		}
+
 		return tagKey;
 	}
 
