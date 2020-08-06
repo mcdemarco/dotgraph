@@ -21,6 +21,7 @@ var dotGraph = {};
 								hideDot: false,
 								hideJSON: false,
 								hideGML: true,
+								hideGraph: false,
 								hideGraphML: true,
 								hideSettings: false,
 								increment: 0.2,
@@ -268,7 +269,7 @@ context.dot = (function() {
 		//Calculate color.
 		if (config.color == "length") {
 			//Graphviz supports HSV, so use it to create a red-to-blue/green range
-			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;  
+			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 		} else if (config.color == "tag" && tag) {
 			var indx = storyObj.tags.indexOf(tag);
@@ -1176,9 +1177,9 @@ context.graph = (function() {
 		return (lumi > 0.5 ? "#000000" : "#ffffff");
 	}
 
-	function convert() {
-		//A change in the settings is what normally triggers (re)graphing, so (re)parse.
-		context.settings.parse();
+	function convert(ev) {
+		context.settings.parse(ev);
+	
 		context.story.parse();
 
 		//Get the dot graph source.
@@ -1301,7 +1302,7 @@ context.init = (function() {
 		context.settings.write();
 		context.settings.toggle();
 		activateForm();
-		context.graph.convert();
+		context.graph.convert(true);
 
 		//Check for a passed-in URL.
 		if (window.location.search && window.location.search.split("?")[1].length > 0) {
@@ -1559,7 +1560,7 @@ context.settings = (function () {
 				StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
 			else 
 				StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
-	
+		
 			if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
 				dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
 			}
@@ -1569,8 +1570,16 @@ context.settings = (function () {
 			try {
 				dgSettings = JSON.parse(dgSettings);
 			} catch(e) {
-				console.log("Found but couldn't parse dotgraph settings: " + dgSettings);
-				return;
+				console.log("Found but couldn't parse dotgraph settings from story: " + dgSettings);
+			}
+		} else {
+			//Check local storage for settings.
+			try {
+				dgSettings = localStorage.getItem("dotgraph-settings" + (ifid() ? "-" + ifid() : ""));
+				if (dgSettings) 
+					dgSettings = JSON.parse(dgSettings);
+			} catch(e) {
+				console.log("Check of local storage for settings failed.");
 			}
 		}
 
@@ -1588,7 +1597,7 @@ context.settings = (function () {
 			config.color = "snow";*/
 	}
 
-	function parse() {
+	function parse(ev) {
 		//Check for config changes.
 		config.checkpoints = document.getElementById("checkpointsCheckbox") ? document.getElementById("checkpointsCheckbox").checked : false;
 		config.cluster = document.getElementById("clusterCheckbox") ? document.getElementById("clusterCheckbox").checked : false;
@@ -1610,6 +1619,11 @@ context.settings = (function () {
 
 		//Some settings are derived, but not many in this case.
 		//derive(afterChange);
+
+		if (ev) {
+			//A change in the settings (that passes in an event) is what normally triggers (re)parsing, so also save.
+			save();
+		}		
 	}
 
 	function scale() {
@@ -1623,10 +1637,16 @@ context.settings = (function () {
 		if (section) {
 			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
 		} else {
+			if (config.hideGraph)
+				document.getElementById("graphSection").style.display = "none";
 			if (config.hideDot)
 				document.getElementById("dotSection").style.display = "none";
+			if (config.hideJSON)
+				document.getElementById("jsonSection").style.display = "none";
 			if (config.hideGML)
 				document.getElementById("gmlSection").style.display = "none";
+			if (config.hideGraphML)
+				document.getElementById("graphmlSection").style.display = "none";
 			if (config.hideSettings)
 				document.getElementById("settingsSection").style.display = "none";
 		}
@@ -1665,16 +1685,28 @@ context.settings = (function () {
 		document.getElementById("scaleInput").value = config.scale;
 	}
 
+	//private.
+
 	function derive() {
 		//Should also cover the exceptions, but haven't done them yet.
 		config.paletteContrastColors = config.palette.map(function(color) {return context.graph.contrastColor(color);});
+	}
+
+	function save() {
+		//Save settings to local storage. Also display the settings as a passage with JSON for the user to save in their story.
+		console.log("Trying to save settings.")
+		try {
+			localStorage.setItem("dotgraph-settings" + (ifid() ? "-" + ifid() : ""), JSON.stringify(config));
+		} catch(e) {
+			console.log("Failed to save settings to local storage.");
+		}
 	}
 
 	function splitAndTrim(tagList) {
 		var tagArray = tagList.trim().split(",");
 		var tagArrayTrimmed = [];
 		for (var i = 0; i<tagArray.length; i++) {
-			var tagTrimmed = tagArray[i].trim(); 
+			var tagTrimmed = tagArray[i].trim();
 			if (tagTrimmed != "")
 				tagArrayTrimmed.push(tagTrimmed);
 		}
@@ -1863,7 +1895,7 @@ context.story = (function () {
 
 		storyObj.unreachable = _.difference(storyObj.reachable, _.uniq(storyObj.reachable));
 		storyObj.reachable = _.uniq(storyObj.reachable);
-//_.pluck(storyObj.reachable,"name"),storyObj.reachable);
+		//_.pluck(storyObj.reachable,"name"),storyObj.reachable);
 		storyObj.maxLength = storyObj.passages.reduce(function(acc,pasg) { return Math.max(acc,pasg.textLength); }, 1);
 		storyObj.avLength = storyObj.passages.reduce(function(acc,pasg) { return acc + pasg.textLength; }, 0) / storyObj.passages.length;
 
