@@ -18,11 +18,7 @@ var dotGraph = {};
 								ends: true,
 								endTag: "end",
 								engine: "dot",
-								hideDot: false,
-								hideJSON: false,
-								hideGML: true,
-								hideGraph: false,
-								hideGraphML: true,
+								hideSource: false,
 								hideSettings: false,
 								increment: 0.2,
 								lastTag: false,
@@ -38,6 +34,7 @@ var dotGraph = {};
 								showTagKey: "default",
 								snowstick: false,
 								snowstickObj: {},
+								source: "dot",
 								tooltips: true,
 								trace: "",
 								palette: ["#FEAF16", "#2ED9FF", "#DEA0FD", "#FE00FA", "#F7E1A0",
@@ -1303,6 +1300,7 @@ context.init = (function() {
 		//Onload function.
 		context.settings.load();
 		context.settings.write();
+		context.settings.source();
 		context.settings.toggle();
 		activateForm();
 		context.graph.convert(true);
@@ -1332,11 +1330,11 @@ context.init = (function() {
 		document.getElementById("scaleUpButton").addEventListener('click', function(){context.graph.scale(config.increment);}, false);
 		document.getElementById("scaleDownButton").addEventListener('click', function(){context.graph.scale(-config.increment);}, false);
 
-		document.getElementById("dotHeader").addEventListener('click', function(){context.settings.toggle("dotSection");}, false);
-		document.getElementById("jsonHeader").addEventListener('click', function(){context.settings.toggle("jsonSection");}, false);
-		document.getElementById("gmlHeader").addEventListener('click', function(){context.settings.toggle("gmlSection");}, false);
-		document.getElementById("graphmlHeader").addEventListener('click', function(){context.settings.toggle("graphmlSection");}, false);
+		document.getElementById("graphHeader").addEventListener('click', function(){context.settings.toggle("graphSection");}, false);
+
+		document.getElementById("sourceSelect").addEventListener('change', context.settings.source, false);
 		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
+		document.getElementById("sourceHeader").addEventListener('click', function(){context.settings.toggle("sourceSection");}, false);
 	}
 
 })();
@@ -1494,6 +1492,7 @@ context.settings = (function () {
 		load: load,
 		parse: parse,
 		scale: scale,
+		source: source,
 		toggle: toggle,
 		write: write
 	};
@@ -1615,6 +1614,7 @@ context.settings = (function () {
 		config.rotation = document.querySelector("input[name='rotateCheckbox']:checked") ? document.querySelector("input[name='rotateCheckbox']:checked").value : "TB";
 		config.scale = document.getElementById("scaleInput") ? document.getElementById("scaleInput").value : "";
 		config.showNodeNames = document.getElementById("nodeCheckbox0") ? document.getElementById("nodeCheckbox0").checked : false;
+		config.source = document.getElementById("sourceSelect").value;
 		config.omitTags = document.getElementById("omitTags") ? splitAndTrim(document.getElementById("omitTags").value) : [];
 		config.lastTag = document.getElementById("lastTagCheckbox") ? document.getElementById("lastTagCheckbox").checked : false;
 		config.countWords = document.getElementById("wcCheckbox") ? document.getElementById("wcCheckbox").checked : false;
@@ -1635,23 +1635,23 @@ context.settings = (function () {
 		context.graph.scale();
 	}
 
+	function source() {
+		config.source = document.getElementById("sourceSelect").value;
+		document.querySelectorAll("section.sourceSubSection").forEach(function(elt) {elt.style.display = "none";});
+		document.getElementById(config.source + "Section").style.display = "block";
+	}
+
 	function toggle(section) {
-		//Check all toggleable sections against the settings and adapt.
+		//Check toggleable sections against the settings and adapt.
 		if (section) {
 			document.getElementById(section).style.display = (document.getElementById(section).offsetParent ? "none" : "");
 		} else {
 			if (config.hideGraph)
 				document.getElementById("graphSection").style.display = "none";
-			if (config.hideDot)
-				document.getElementById("dotSection").style.display = "none";
-			if (config.hideJSON)
-				document.getElementById("jsonSection").style.display = "none";
-			if (config.hideGML)
-				document.getElementById("gmlSection").style.display = "none";
-			if (config.hideGraphML)
-				document.getElementById("graphmlSection").style.display = "none";
 			if (config.hideSettings)
 				document.getElementById("settingsSection").style.display = "none";
+			if (config.hideSource)
+				document.getElementById("sourceSection").style.display = "none";
 		}
 	}
 
