@@ -472,8 +472,8 @@ context.gml = (function() {
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				if (storyObj.passages[i].pid == storyObj.startNode) {
 					result = passage(storyObj.passages[i],1);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.edges.concat(result.edges);
+					subbuffer.nodes = subbuffer.nodes.concat(result.node);
+					subbuffer.edges = subbuffer.edges.concat(result.edges);
 				}
 			}
 			var renumberPid = 2;
@@ -481,8 +481,8 @@ context.gml = (function() {
 				var psgi = storyObj.passages[i];
 				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
 					result = passage(psgi,renumberPid);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.edges.concat(result.edges);
+					subbuffer.nodes = subbuffer.nodes.concat(result.node);
+					subbuffer.edges = subbuffer.edges.concat(result.edges);
 					renumberPid++;
 				}
 			}
@@ -507,24 +507,36 @@ context.gml = (function() {
 		if ((config.omitSpecialPassages && passage.special) || passage.omit)
 			return subbuffer;
 
-		var scrubbedNameOrPid = getNameOrPid(passage);
-
 		//Push the node itself and the styles (because it's always styled in some way).
 		var nodeBuffer = [];
 		if (passage.pid != storyObj.startNode)
 			nodeBuffer.push("\t");
 		nodeBuffer.push("node [");
 		nodeBuffer.push("\t" + "id " +  passage.pid);
-		nodeBuffer.push("\t" + "label " + scrubbedNameOrPid);
 		//In theory you can push all the styles, but in practice they upset apps that read GML.
+		nodeBuffer.push("\t" + "label " + stylePassage(passage,label));
 		nodeBuffer.push("]");
 		
 		subbuffer.node.push(nodeBuffer.join('\r\n\t'));
 
 		//Push the link list.
+		var scrubbedNameOrPid = getNameOrPid(passage);
 		subbuffer.edges = graphLinks(passage, scrubbedNameOrPid);
 
 		return subbuffer;
+	}
+
+	function stylePassage(passage, label) {
+		//Cut down from the usual full styling to return the label only.
+		if (label || config.prefix || config.postfix) {
+			if (label)
+				label = '"' + config.prefix + label + config.postfix + '"';
+			else
+				label = getNameOrPid(passage, false, false, true);
+		} else 
+			label = getNameOrPid(passage);
+
+		return label;
 	}
 
 	function scrub(name) {
