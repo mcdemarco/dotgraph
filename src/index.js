@@ -973,8 +973,8 @@ context.json = (function() {
 			for (i = 0; i < storyObj.passages.length; ++i) {
 				if (storyObj.passages[i].pid == storyObj.startNode) {
 					result = passage(storyObj.passages[i],1,clusterKey);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.links.concat(result.links);
+					subbuffer.nodes = subbuffer.nodes.concat(result.node);
+					subbuffer.links = subbuffer.links.concat(result.links);
 				}
 			}
 			var renumberPid = 2;
@@ -982,8 +982,8 @@ context.json = (function() {
 				var psgi = storyObj.passages[i];
 				if (psgi.pid != storyObj.startNode && !(config.omitSpecialPassages && psgi.special) && !psgi.omit) {
 					result = passage(psgi,renumberPid,clusterKey);
-					subbuffer.nodes.concat(result.node);
-					subbuffer.links.concat(result.links);
+					subbuffer.nodes = subbuffer.nodes.concat(result.node);
+					subbuffer.links = subbuffer.links.concat(result.links);
 					renumberPid++;
 				}
 			}
@@ -1060,6 +1060,9 @@ context.json = (function() {
 			styles.shape = "rect";
 		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
 			styles.shape = "diamond";
+		} else if (config.showNodeNames == false) {
+			//This looks better in dagre.
+			styles.shape = "circle";
 		} else {
 			styles.shape = "ellipse";
 		}
@@ -1693,13 +1696,14 @@ context.settings = (function () {
 	}
 
 	function save() {
-		//Save settings to local storage. Also display the settings as a passage with JSON for the user to save in their story.
+		//Save settings to local storage. 
 		console.log("Trying to save settings.")
 		try {
 			localStorage.setItem("dotgraph-settings" + (ifid() ? "-" + ifid() : ""), JSON.stringify(config));
 		} catch(e) {
 			console.log("Failed to save settings to local storage.");
 		}
+		//TODO: Also display the settings as a passage with JSON for the user to save in their story.
 	}
 
 	function splitAndTrim(tagList) {
