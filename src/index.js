@@ -1303,7 +1303,8 @@ context.init = (function() {
 		context.settings.source();
 		context.settings.toggle();
 		activateForm();
-		context.graph.convert(true);
+
+		context.graph.convert();
 
 		//Check for a passed-in URL.
 		if (window.location.search && window.location.search.split("?")[1].length > 0) {
@@ -1626,7 +1627,7 @@ context.settings = (function () {
 		if (ev) {
 			//A change in the settings (that passes in an event) is what normally triggers (re)parsing, so also save.
 			save();
-		}		
+		}
 	}
 
 	function scale() {
@@ -1635,10 +1636,15 @@ context.settings = (function () {
 		context.graph.scale();
 	}
 
-	function source() {
+	function source(ev) {
 		config.source = document.getElementById("sourceSelect").value;
 		document.querySelectorAll("section.sourceSubSection").forEach(function(elt) {elt.style.display = "none";});
 		document.getElementById(config.source + "Section").style.display = "block";
+
+		if (ev) {
+			//A change in the settings (that passes in an event) is what normally triggers (re)parsing, so also save.
+			save();
+		}
 	}
 
 	function toggle(section) {
@@ -1686,6 +1692,7 @@ context.settings = (function () {
 			<input type="radio" id="engineCheckbox5" name="engineCheckbox" value="twopi" <%= (engine == "twopi" ? "checked" : "")%>/>&nbsp;<label for="engineCheckbox5">twopi</label><br/>');
 		document.getElementById("settingsForm").innerHTML = output(config);
 		document.getElementById("scaleInput").value = config.scale;
+		document.getElementById("sourceSelect").value = config.source;
 	}
 
 	//private.
@@ -1697,7 +1704,6 @@ context.settings = (function () {
 
 	function save() {
 		//Save settings to local storage. 
-		console.log("Trying to save settings.")
 		try {
 			localStorage.setItem("dotgraph-settings" + (ifid() ? "-" + ifid() : ""), JSON.stringify(config));
 		} catch(e) {
