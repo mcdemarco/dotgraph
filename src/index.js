@@ -31,9 +31,9 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: "100%",
 								showNodeNames: false,
+								showSettings: true,
 								showTagKey: "default",
 								snowstick: false,
-								snowstickObj: {},
 								source: "dot",
 								tooltips: true,
 								trace: "",
@@ -54,6 +54,8 @@ var dotGraph = {};
 									readHue: 0.22
 								}
 							 };
+
+	var snowstickObj = {};
 
 	var specialPassageList = ["StoryTitle", "StoryIncludes", "StoryData",
 														"StoryAuthor", "StorySubtitle", "StoryMenu", "StorySettings",
@@ -930,7 +932,7 @@ context.json = (function() {
 				label: node.label ? node.label : node.name
 			};
 		if (node.color) 
-			setting.style = 'fill: ' + node.color + (node.contrastColor ? '; color:' + node.contrastColor : '') + (node.trace ? ';stroke-width: 3px' : '');
+			setting.style = 'fill: ' + node.color + (node.contrastColor ? '; stroke-color:' + node.contrastColor : '') + (node.trace ? ';stroke-width: 3px' : '');
 			if (node.shape)
 				setting.shape = node.shape;
 				
@@ -944,7 +946,7 @@ context.json = (function() {
 				g.setNode(cluster.id, {
 					label: cluster.name, 
 					clusterLabelPos: 'top', 
-					style: 'fill: ' + cluster.color + (cluster.contrastColor ? '; color:' + cluster.contrastColor : '')
+					style: 'fill: ' + cluster.color + (cluster.contrastColor ? '; stroke-color:' + cluster.contrastColor : '')
 				});
 			}
 			for (n = 0; n < data.nodes.length; n++) {
@@ -1161,7 +1163,7 @@ context.json = (function() {
 	}
 
 	function stylePassage(passage, label) {
-		var styles = {contrastColor: "black"};
+		var styles = {};
 
 		var hue = 0;
 		var sat = 0;
@@ -1169,7 +1171,8 @@ context.json = (function() {
 		var pid = passage.pid;
 		var content = passage.content;
 		var tag = passage.theTag;
-		var color, contrastColor;
+		var color;
+		var contrastColor = "black";
 
 		if (passage.trace) {
 			styles.trace = true;
@@ -1312,15 +1315,13 @@ context.graph = (function() {
 		//Write the dot graph text to the page.
 		document.getElementById(config.source + "file").value = output;
 
-		//Re-render when converting.  (The reverse is not required.)
-		console.log(document.getElementsByTagName("svg").length);
-
 		if (config.source != "json" && config.source != "dot") {
 			//Also generate and render the dot if the choice isn't graphable.
 			output = context.dot.convert();
 			document.getElementById("dotfile").value = output;
 		}
 
+		//Re-render when converting.  (The reverse is not required.)
 		render(ev);
 	}
 
@@ -1461,9 +1462,9 @@ context.passage = (function() {
 
 		//SnowStick.
 		if (config.snowstick) {
-			passageObj.ssLeaf = Math.max(config.snowstickObj.leaf.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.leaf.length,1);
-			passageObj.ssRead = Math.max(config.snowstickObj.read.indexOf(passageObj.name), 0) / Math.max(config.snowstickObj.read.length,1);
-			passageObj.ssBookmark = (config.snowstickObj.bookmark == passageObj.name);
+			passageObj.ssLeaf = Math.max(snowstickObj.leaf.indexOf(passageObj.name), 0) / Math.max(snowstickObj.leaf.length,1);
+			passageObj.ssRead = Math.max(snowstickObj.read.indexOf(passageObj.name), 0) / Math.max(snowstickObj.read.length,1);
+			passageObj.ssBookmark = (snowstickObj.bookmark == passageObj.name);
 		}
 		return passageObj;
 	}
@@ -1595,7 +1596,7 @@ context.settings = (function () {
 			var hyfid = ifid() ? "-" + ifid() : "";
 			try {
 				localStorage.setItem("snowstick-bookmark" + hyfid, newMark);
-				config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + hyfid) ? localStorage.getItem("snowstick-bookmark" + hyfid) : "";
+				snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + hyfid) ? localStorage.getItem("snowstick-bookmark" + hyfid) : "";
 			} catch (e) {
 				console.log("Bookmarking failed.");
 			}
@@ -1622,10 +1623,10 @@ context.settings = (function () {
 		//Check localStorage for snowstick.
 		try {
 			var hyfid = ifid() ? "-" + ifid() : "";
-			config.snowstickObj["read"] = localStorage.getItem("snowstick-read" + hyfid) ? JSON.parse(localStorage.getItem("snowstick-read" + hyfid)) : [];
-			config.snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf" + hyfid) ? JSON.parse(localStorage.getItem("snowstick-leaf" + hyfid)) : [];
-			config.snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + hyfid) ? localStorage.getItem("snowstick-bookmark" + hyfid) : "";
-			config.snowstick = (config.snowstickObj.leaf.length > 0 || config.snowstickObj.read.length > 0 || config.snowstickObj.bookmark.length > 0);
+			snowstickObj["read"] = localStorage.getItem("snowstick-read" + hyfid) ? JSON.parse(localStorage.getItem("snowstick-read" + hyfid)) : [];
+			snowstickObj["leaf"] = localStorage.getItem("snowstick-leaf" + hyfid) ? JSON.parse(localStorage.getItem("snowstick-leaf" + hyfid)) : [];
+			snowstickObj["bookmark"] = localStorage.getItem("snowstick-bookmark" + hyfid) ? localStorage.getItem("snowstick-bookmark" + hyfid) : "";
+			config.snowstick = (snowstickObj.leaf.length > 0 || snowstickObj.read.length > 0 || snowstickObj.bookmark.length > 0);
 		} catch (e) {
 			config.snowstick = false;
 			console.log("Error checking local storage for SnowStick data: " + e.description);
@@ -1679,6 +1680,13 @@ context.settings = (function () {
 
 		//Some settings are derived, so derive them now.
 		derive();
+
+		//One setting isn't live.
+		if (config.showSettings) {
+			//Take over the notes div for settings.
+			document.getElementById("notes").innerHTML = '<textarea id="settingsTextarea"></textarea>';
+			show();
+		}
 
 		/* Lastly, switch color to snowstick if there's data and no 'false' setting.
 		if (config.snowstick)
@@ -1795,7 +1803,15 @@ context.settings = (function () {
 		} catch(e) {
 			console.log("Failed to save settings to local storage.");
 		}
-		//TODO: Also display the settings as a passage with JSON for the user to save in their story.
+
+		//Also display the settings as a passage with JSON for the user to save in their story.
+		show();
+	}
+
+	function show() {
+		//Presence of setting determines presence of element.
+		if (config.showSettings)
+			document.getElementById("settingsTextarea").value = "::DotGraphSettings\r\n\r\n" + JSON.stringify(config, null, '\t') + "\r\n";
 	}
 
 	function splitAndTrim(tagList) {

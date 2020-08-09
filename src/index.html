@@ -12,12 +12,13 @@
  #stats {font-style:italic;text-align:center;}
  input#omitTags, input#clusterTags {width:30%;}
  label {white-space:nowrap;}
- div#notes {font-size:smaller;max-width:50%;float:right;}
- p {margin-top: 0}
+ div#notes {max-width:50%;float:right;}
+ div#notes p {font-size:smaller;margin-top: 0;}
  h2 {float:left;padding-right:3em;;text-decoration:underline;}
  section {clear:both;}
  section.sourceSubSection {display:none;}
- textarea {min-height:20em;}
+ textarea {height:20em;}
+ textarea#settingsTextarea {height:16em; width:32em;"}
  #graphSection {text-align:center;}
  #saveSvgButton {float:left;}
  #scaleInput {width:5em;}
@@ -95,8 +96,6 @@
 			JSON output is useful for making <a href="https://dagrejs.github.io/project/dagre-d3/latest/demo/clusters.html">directed, clustered</a> graphs or <a href="https://lvngd.com/blog/force-directed-network-graph-d3/">force-directed graphs</a> using <a href="https://d3js.org">d3.js</a>.
 		</p>
 
-		<button type="button" id="saveJSONButton">Save JSON</button><br/>
-	
 		<textarea id="jsonfile" style="width:100%;height:10em;"></textarea>
 	</section>
 
