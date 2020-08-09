@@ -6,22 +6,31 @@
 </title>
 <meta charset="utf-8">
 <style>
+ /* dot and settings */
  body {margin:3%;}
  tw-storydata {display:none;}
  #stats {font-style:italic;text-align:center;}
  input#omitTags, input#clusterTags {width:30%;}
  label {white-space:nowrap;}
- div#notes {font-size:smaller;width:40%;padding-top:10px;float:right;}
+ div#notes {font-size:smaller;max-width:50%;float:right;}
+ p {margin-top: 0}
  h2 {float:left;padding-right:3em;;text-decoration:underline;}
  section {clear:both;}
  section.sourceSubSection {display:none;}
- textarea {min-height:15em;}
+ textarea {min-height:20em;}
  #graphSection {text-align:center;}
  #saveSvgButton {float:left;}
  #scaleInput {width:5em;}
  #scaleUpButton, #scaleDownButton {font-weight:bold;}
+ /* dagre-d3 */
+ svg#dagre .clusters rect {fill: #00ffd0;stroke: #999;stroke-width: 1.5px;}
+ svg#dagre text {font-weight: 300;font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;font-size: 14px;}
+ svg#dagre .node rect, svg#dagre .node circle, svg#dagre .node ellipse, svg#dagre .node diamond {stroke: #000;fill: #fff;stroke-width: 1.5px;}
+ svg#dagre .edgePath path {stroke: #333;fill: #333;stroke-width: 1.5px;}
+ svg#dagre .edgePath path.path {stroke: #333;fill: none;stroke-width: 1.5px;}
 </style>
 <%= vizScript %>
+<%= d3Script %>
 </head>
 <body>
 	<h1>DotGraph Proof of <%= name %></h1>
@@ -38,12 +47,13 @@
 		<div id="notes">
 						<p><b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color by length is on, all real nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.</p>
 						<p>Stray or misplaced nodes can result from the omit tags setting, from duplicate passage names, scripted passage transitions, or other linking issues.</p>
-						<p>The layout engine options change the graph style; some options are slower than the default ("dot").  The image format is SVG.  For more information, see <a href="http://mcdemarco.net/tools/scree/dotgraph/">the website</a> or <a href="https://bitbucket.org/mcdemarco/dotgraph/src/default/README.md">the README</a>.</p>
+						<p>The layout engine options change the graph style; some options are slower than the default ("dot").  The image format is SVG.</p>
+						<p>Several output options are available for use in other graphing programs.  The JSON version also generates a graph using dagre-d3 instead of graphviz (online version only).  For more information, see <a href="http://mcdemarco.net/tools/scree/dotgraph/">the website</a> or <a href="https://bitbucket.org/mcdemarco/dotgraph/src/default/README.md">the README</a>.</p>
 		</div>
-	<div>
-		<form id="settingsForm">
-		</form>
-	</div>
+		<div>
+						<form id="settingsForm">
+						</form>
+		</div>
 	</section>
 
 	<h2 id="graphHeader">Graph</h2>
@@ -64,6 +74,7 @@
 			<option value="graphml">GraphML</option>
 			<option value="json">JSON</option>
 		</select>
+		<button type="button" id="saveSourceButton">Save Source</button>
 
 	<section id="dotSection" class="sourceSubSection">
 		<h3>Dot Source</h3>
@@ -73,7 +84,6 @@
 		</p>
 
 		<button type="button" id="editButton">Redraw with edits</button>
-		<button type="button" id="saveDotButton">Save Source</button><br/>
 	
 		<textarea id="dotfile" style="width:100%;height:10em;"></textarea>
 	</section>
@@ -97,8 +107,6 @@
 			GML is a format similar to Dot that can be rendered by various free and open-source programs including <a href="https://cytoscape.org">Cytoscape</a>, <a href="https://gephi.org">Gephi</a>, <a href="https://networkx.github.io">NetworkX</a>, <a href="https://socnetv.org/">Social Network Visualizer</a>, and <a href="https://tulip.labri.fr/TulipDrupal/">Tulip</a>.  Note that it does not support clusters, and that other style data has been omitted because there is no standard way to format it.
 		</p>
 
-		<button type="button" id="saveGMLButton">Save GML</button><br/>
-	
 		<textarea id="gmlfile" style="width:100%;height:10em;"></textarea>
 	</section>
 
@@ -109,8 +117,6 @@
 			GraphML is an XML-based graph format that can be rendered by various free and open-source programs including <a href="https://gephi.org">Gephi</a>, <a href="https://www.yworks.com/products/yed">yEd</a>, and <a href="https://www.yworks.com/yed-live/">yEd Live</a> (online).  Note that it does not support clusters, and that some other style data has been omitted.  Labels and colors are (somewhat) formatted for both yEd and other graphml readers.
 		</p>
 
-		<button type="button" id="saveGraphMLButton">Save GraphML</button><br/>
-	
 		<textarea id="graphmlfile" style="width:100%;height:10em;"></textarea>
 	</section>
 	</section>

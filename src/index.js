@@ -97,7 +97,8 @@ var dotGraph = {};
 context.dot = (function() {
 
 	return {
-		convert: convert
+		convert: convert,
+		render: render
 	};
 
 	function convert() {
@@ -124,6 +125,32 @@ context.dot = (function() {
 		buffer.push("\r\n}");
 		
 		return buffer.join("\r\n");
+	}
+
+	function render() {
+		//Retrieve the source.
+		var data = document.getElementById("dotfile").value;
+
+		//Clear the area!
+		document.getElementById("graph").innerHTML = "";
+
+		//Do the conversion and write the svg to the page.
+		viz.renderSVGElement(data, {engine: config.engine})
+			.then(function(result){
+				result.setAttribute("id","graphviz"); //Not necessary?
+				document.getElementById("graph").appendChild(result);
+				context.graph.scale();
+				if (config.snowstick) {
+					//Activate the nodes for rebookmarking.
+					document.querySelectorAll("#graph g.node text").forEach(function(elt){elt.addEventListener('click', context.settings.bookmark, false);});
+				}
+			})
+			.catch(function(error){
+				// Create a new Viz instance
+				viz = new Viz();
+				// Possibly display the error
+				console.log(error);
+			});
 	}
 
 	//private
@@ -843,7 +870,8 @@ context.graphml = (function() {
 context.json = (function() {
 
 	return {
-		convert: convert
+		convert: convert,
+		render: render
 	};
 
 	function convert() {
@@ -876,6 +904,91 @@ context.json = (function() {
 			result.settings.rankdir = config.rotation;
 
 		return JSON.stringify(result, null, '\t');
+	}
+
+	function render() {
+		//Load the graph data.
+		var data = JSON.parse(document.getElementById("jsonfile").value);
+
+		//Clear the area!
+		document.getElementById("graph").innerHTML = "<svg></svg>";
+
+		var layout = {};
+		if (data.settings && data.settings.rankdir)
+			layout.rankdir = data.settings.rankdir;
+
+		// Create the input graph
+		var g = new dagreD3.graphlib.Graph({compound:true})
+				.setGraph(layout)
+				.setDefaultEdgeLabel(function() { return {}; });
+		
+		var n, node;
+		// Parse out the nodes.
+		for (n = 0; n < data.nodes.length; n++) {
+			node = data.nodes[n];
+			var setting = {
+				label: node.label ? node.label : node.name
+			};
+		if (node.color) 
+			setting.style = 'fill: ' + node.color + (node.contrastColor ? '; color:' + node.contrastColor : '') + (node.trace ? ';stroke-width: 3px' : '');
+			if (node.shape)
+				setting.shape = node.shape;
+				
+			g.setNode(node.id, setting);
+		}
+		
+		//Convert the clusters into nodes.
+		if (data.clusters) {
+			for (var c = 0; c < data.clusters.length; c++) {
+				var cluster = data.clusters[c];
+				g.setNode(cluster.id, {
+					label: cluster.name, 
+					clusterLabelPos: 'top', 
+					style: 'fill: ' + cluster.color + (cluster.contrastColor ? '; color:' + cluster.contrastColor : '')
+				});
+			}
+			for (n = 0; n < data.nodes.length; n++) {
+				node = data.nodes[n];
+				if (node.cluster)
+					g.setParent(node.id, node.cluster);
+			}
+		}
+		
+		//Parse out the edges.
+		for (var e = 0; e < data.links.length; e++) {
+			var edge = data.links[e];
+			var settings = {curve: d3.curveBasis};
+			if (edge.category && edge.category == "display")
+				settings.style = "stroke-dasharray: 5, 5;";
+			g.setEdge(edge.source, edge.target, settings);
+		}
+		
+		g.nodes().forEach(function(v) {
+			var node = g.node(v);
+			// Round the corners of the nodes
+			node.rx = node.ry = 5;
+		});
+
+		// Create the renderer
+		var render = new dagreD3.render();
+		
+		// Set up an SVG group so that we can translate the final graph.
+		var svg = d3.select("svg"),
+				svgGroup = svg.append("g");
+		
+		// Run the renderer. This is what draws the final graph.
+		render(d3.select("svg g"), g);
+		
+		// Center the graph
+		//	if (isFinite(g.graph().width)) {
+		svg.attr("id", "dagre");
+		svg.attr("width", "100%");
+		if (isFinite(g.graph().width) && isFinite(g.graph().height)) {
+			svg.attr("viewBox", "0 0 " + (g.graph().width + 100) + " " + (g.graph().height + 100))
+			svgGroup.attr("transform", "scale(1 1) translate(50, 50)");
+		}
+
+		context.graph.scale();
 	}
 
 	//private
@@ -1058,22 +1171,24 @@ context.json = (function() {
 		var tag = passage.theTag;
 		var color, contrastColor;
 
+		if (passage.trace) {
+			styles.trace = true;
+		}
+
 		//Start with any special shape for the passage.
 		if (config.snowstick && passage.ssBookmark) {
 			styles.shape = "rect";
-		} else if (passage.trace) {
-			styles.shape = "circle";
 		} else if (pid == storyObj.startNode || _.find(storyObj.unreachable, function(str){return str == passage.name;})) {
 			styles.shape = "circle";
 		} else if (config.ends && context.passage.hasTag(passage, config.endTag)) {
 			styles.shape = "rect";
 		} else if (config.checkpoints && context.passage.hasTag(passage, config.checkpointTag)) {
 			styles.shape = "diamond";
-		} else if (config.showNodeNames == false) {
+		} else if (config.showNodeNames) {
+			styles.shape = "ellipse";
+		} else {
 			//This looks better in dagre.
 			styles.shape = "circle";
-		} else {
-			styles.shape = "ellipse";
 		}
 
 		contrastColor = "BLACK";
@@ -1165,11 +1280,8 @@ context.graph = (function() {
 	return {
 		contrastColor: contrastColor,
 		convert: convert,
-		edit: edit,
-		saveDot: saveDot,
-		saveJSON: saveJSON,
-		saveGML: saveGML,
-		saveGraphML: saveGraphML,
+		render: render,
+		saveSource: saveSource,
 		saveSvg: saveSvg,
 		scale: scale
 	};
@@ -1194,51 +1306,40 @@ context.graph = (function() {
 	
 		context.story.parse();
 
-		//Get the dot graph source.
-		var output = context.dot.convert();
-		
+		//Get the appropriate source.
+		var output = context[config.source].convert();
+
 		//Write the dot graph text to the page.
-		var dotTextarea = document.getElementById("dotfile");
-		dotTextarea.value = output;
-		//dotTextarea.style.height = dotTextarea.scrollHeight+'px'; 
+		document.getElementById(config.source + "file").value = output;
 
-		render(output);
-		
-		document.getElementById("jsonfile").value = context.json.convert();
-		document.getElementById("gmlfile").value = context.gml.convert();
-		document.getElementById("graphmlfile").value = context.graphml.convert();
+		//Re-render when converting.  (The reverse is not required.)
+		console.log(document.getElementsByTagName("svg").length);
+
+		if (config.source != "json" && config.source != "dot") {
+			//Also generate and render the dot if the choice isn't graphable.
+			output = context.dot.convert();
+			document.getElementById("dotfile").value = output;
+		}
+
+		render(ev);
 	}
-			
-	function edit() {
+
+	function render(ev) {
 		//The user can edit the dot graph and rerender it; 
-		//in that case, read the dot file from the browser and render it.
-		var editedOutput = document.getElementById("dotfile").value;
-
-		render(editedOutput);
+		//in that case, no reconversion is necessary.  Read the source from the UI and render it.
+		if (config.source == "json")
+			context.json.render();
+		else
+			context.dot.render();
 	}
 
-	function saveDot() {
-		var output = document.getElementById("dotfile").value;
+	function saveSource() {
+		var output = document.getElementById(config.source + "file").value;
 		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "dot" + Date.now() + "." + config.dotExtension, true);
- 	}
-
-	function saveJSON() {
-		var output = document.getElementById("jsonfile").value;
-		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "json" + Date.now() + ".json", true);
- 	}
-
-	function saveGML() {
-		var output = document.getElementById("gmlfile").value;
-		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "gml" + Date.now() + ".gml", true);
- 	}
-
-	function saveGraphML() {
-		var output = document.getElementById("graphmlfile").value;
-		var blob = new Blob([output], {type: "text/plain;charset=utf-8"});
-		filesaver.saveAs(blob, "graphml" + Date.now() + ".graphml", true);
+		var extension = config.source;
+		if (extension == "dot") 
+			extension = config.dotExtension;
+		filesaver.saveAs(blob, config.source + Date.now() + "." + extension, true);
  	}
 
 	function saveSvg() {
@@ -1277,29 +1378,6 @@ context.graph = (function() {
 		document.getElementById("scaleInput").value = config.scale;
 	}
 
-	//Private
-	function render(output) {
-		//Clear the area!
-		document.getElementById("graph").innerHTML = "";
-
-		//Do the conversion and write the svg to the page.
-		viz.renderSVGElement(output, {engine: config.engine})
-			.then(function(result){
-				document.getElementById("graph").appendChild(result);
-				context.graph.scale();
-				if (config.snowstick) {
-					//Activate the nodes for rebookmarking.
-					document.querySelectorAll("#graph g.node text").forEach(function(elt){elt.addEventListener('click', context.settings.bookmark, false);});
-				}
-			})
-			.catch(function(error){
-				// Create a new Viz instance
-				viz = new Viz();
-				// Possibly display the error
-				console.log(error);
-			});
-	}
-	
 })();
 
 context.init = (function() {
@@ -1316,8 +1394,6 @@ context.init = (function() {
 		context.settings.toggle();
 		activateForm();
 
-		context.graph.convert();
-
 		//Check for a passed-in URL.
 		if (window.location.search && window.location.search.split("?")[1].length > 0) {
 			context.story.load(window.location.search.split("?")[1]);
@@ -1332,12 +1408,10 @@ context.init = (function() {
 		document.getElementById("trace").addEventListener('input', _.debounce(context.graph.convert,1000), false);
 
 		//Not actually part of the settings form.
-		document.getElementById("editButton").addEventListener('click', context.graph.edit, false);
-		document.getElementById("saveDotButton").addEventListener('click', context.graph.saveDot, false);
-		document.getElementById("saveJSONButton").addEventListener('click', context.graph.saveJSON, false);
-		document.getElementById("saveGMLButton").addEventListener('click', context.graph.saveGML, false);
-		document.getElementById("saveGraphMLButton").addEventListener('click', context.graph.saveGraphML, false);
+		document.getElementById("editButton").addEventListener('click', context.graph.render, false);
+		document.getElementById("saveSourceButton").addEventListener('click', context.graph.saveSource, false);
 		document.getElementById("saveSvgButton").addEventListener('click', context.graph.saveSvg, false);
+		document.getElementById("sourceSelect").addEventListener('change', context.settings.source, false);
 
 		document.getElementById("scaleInput").addEventListener('change', function(){context.settings.scale();}, false);
 		document.getElementById("scaleUpButton").addEventListener('click', function(){context.graph.scale(config.increment);}, false);
@@ -1345,7 +1419,6 @@ context.init = (function() {
 
 		document.getElementById("graphHeader").addEventListener('click', function(){context.settings.toggle("graphSection");}, false);
 
-		document.getElementById("sourceSelect").addEventListener('change', context.settings.source, false);
 		document.getElementById("settingsHeader").addEventListener('click', function(){context.settings.toggle("settingsSection");}, false);
 		document.getElementById("sourceHeader").addEventListener('click', function(){context.settings.toggle("sourceSection");}, false);
 	}
@@ -1652,6 +1725,7 @@ context.settings = (function () {
 		config.source = document.getElementById("sourceSelect").value;
 		document.querySelectorAll("section.sourceSubSection").forEach(function(elt) {elt.style.display = "none";});
 		document.getElementById(config.source + "Section").style.display = "block";
+		context.graph.convert(ev);
 
 		if (ev) {
 			//A change in the settings (that passes in an event) is what normally triggers (re)parsing, so also save.
