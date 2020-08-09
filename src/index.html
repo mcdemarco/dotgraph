@@ -17,8 +17,8 @@
  h2 {float:left;padding-right:3em;;text-decoration:underline;}
  section {clear:both;}
  section.sourceSubSection {display:none;}
- textarea {height:20em;}
- textarea#settingsTextarea {height:16em; width:32em;"}
+ textarea {width: 100%; height:20em;}
+ textarea.settings {height:16em; width:20em;}
  #graphSection {text-align:center;}
  #saveSvgButton {float:left;}
  #scaleInput {width:5em;}
@@ -46,10 +46,22 @@
 	<h2 id="settingsHeader">Settings</h2>
 	<section id="settingsSection">
 		<div id="notes">
-						<p><b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color by length is on, all real nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.</p>
-						<p>Stray or misplaced nodes can result from the omit tags setting, from duplicate passage names, scripted passage transitions, or other linking issues.</p>
-						<p>The layout engine options change the graph style; some options are slower than the default ("dot").  The image format is SVG.</p>
-						<p>Several output options are available for use in other graphing programs.  The JSON version also generates a graph using dagre-d3 instead of graphviz (online version only).  For more information, see <a href="http://mcdemarco.net/tools/scree/dotgraph/">the website</a> or <a href="https://bitbucket.org/mcdemarco/dotgraph/src/default/README.md">the README</a>.</p>
+			<div id="notesDiv">
+							<p><b>Notes:</b> The start node is double-circled, as are any unreachable nodes.  When color by length is on, all real nodes are colored in shades of red (shorter than average) to blue (longer than average) based on the relative length of their contents.</p>
+							<p>Stray or misplaced nodes can result from the omit tags setting, from duplicate passage names, scripted passage transitions, or other linking issues.</p>
+							<p>The layout engine options change the graph style; some options are slower than the default ("dot").  The image format is SVG.</p>
+							<p>Several output options are available for use in other graphing programs.  The JSON version also generates a graph using dagre-d3 instead of graphviz (online version only).  For more information, see <a href="http://mcdemarco.net/tools/scree/dotgraph/">the website</a> or <a href="https://bitbucket.org/mcdemarco/dotgraph/src/default/README.md">the README</a>.</p>
+			</div>
+			<div id="settingsDisplayDiv" style="display:none;white-space:nowrap;">
+							<div style="display:inline-block;">
+											<b>Currently selected settings</b><br/>
+											<textarea id="settingsTextarea" class="settings"></textarea>
+							</div>
+							<div style="display:inline-block;">
+											<b>Settings found in story</b><br/>
+											<textarea id="storySettingsTextarea" class="settings" placeholder="no settings"></textarea> 
+							</div>
+			</div>
 		</div>
 		<div>
 						<form id="settingsForm">
@@ -86,7 +98,7 @@
 
 		<button type="button" id="editButton">Redraw with edits</button>
 	
-		<textarea id="dotfile" style="width:100%;height:10em;"></textarea>
+		<textarea id="dotfile"></textarea>
 	</section>
 
 	<section id="jsonSection" class="sourceSubSection">
@@ -96,7 +108,7 @@
 			JSON output is useful for making <a href="https://dagrejs.github.io/project/dagre-d3/latest/demo/clusters.html">directed, clustered</a> graphs or <a href="https://lvngd.com/blog/force-directed-network-graph-d3/">force-directed graphs</a> using <a href="https://d3js.org">d3.js</a>.
 		</p>
 
-		<textarea id="jsonfile" style="width:100%;height:10em;"></textarea>
+		<textarea id="jsonfile"></textarea>
 	</section>
 
 	<section id="gmlSection" class="sourceSubSection">
@@ -106,7 +118,7 @@
 			GML is a format similar to Dot that can be rendered by various free and open-source programs including <a href="https://cytoscape.org">Cytoscape</a>, <a href="https://gephi.org">Gephi</a>, <a href="https://networkx.github.io">NetworkX</a>, <a href="https://socnetv.org/">Social Network Visualizer</a>, and <a href="https://tulip.labri.fr/TulipDrupal/">Tulip</a>.  Note that it does not support clusters, and that other style data has been omitted because there is no standard way to format it.
 		</p>
 
-		<textarea id="gmlfile" style="width:100%;height:10em;"></textarea>
+		<textarea id="gmlfile"></textarea>
 	</section>
 
 	<section id="graphmlSection" class="sourceSubSection">
@@ -116,7 +128,7 @@
 			GraphML is an XML-based graph format that can be rendered by various free and open-source programs including <a href="https://gephi.org">Gephi</a>, <a href="https://www.yworks.com/products/yed">yEd</a>, and <a href="https://www.yworks.com/yed-live/">yEd Live</a> (online).  Note that it does not support clusters, and that some other style data has been omitted.  Labels and colors are (somewhat) formatted for both yEd and other graphml readers.
 		</p>
 
-		<textarea id="graphmlfile" style="width:100%;height:10em;"></textarea>
+		<textarea id="graphmlfile"></textarea>
 	</section>
 	</section>
 

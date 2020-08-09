@@ -31,7 +31,7 @@ var dotGraph = {};
 								rotation: "TB",
 								scale: "100%",
 								showNodeNames: false,
-								showSettings: true,
+								showSettings: false,
 								showTagKey: "default",
 								snowstick: false,
 								source: "dot",
@@ -1658,6 +1658,8 @@ context.settings = (function () {
 		if (dgSettings) {
 			try {
 				dgSettings = JSON.parse(dgSettings);
+				//Also write to the appropriate textarea.
+				document.getElementById("storySettingsTextarea").value = "::DotGraphSettings\r\n\r\n" + JSON.stringify(dgSettings, null, '\t') + "\r\n";
 			} catch(e) {
 				console.log("Found but couldn't parse dotgraph settings from story: " + dgSettings);
 			}
@@ -1684,7 +1686,8 @@ context.settings = (function () {
 		//One setting isn't live.
 		if (config.showSettings) {
 			//Take over the notes div for settings.
-			document.getElementById("notes").innerHTML = '<textarea id="settingsTextarea"></textarea>';
+			document.getElementById("notesDiv").remove();
+			document.getElementById("settingsDisplayDiv").style.display = "block";
 			show();
 		}
 
