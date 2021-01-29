@@ -42,6 +42,10 @@ SnowStick is a bit of JavaScript and CSS you can add to stories that use Snowman
 
 ## Versions
 
+### 2.3.1
+
+Fix a DGaaS issue.
+
 ### 2.3.0
 
 Save current settings to local storage (per IFID).  Fix a tag issue.  Output JSON, GML, GraphML.

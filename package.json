@@ -1,6 +1,6 @@
 {
   "name": "DotGraph",
-  "version": "2.2.1-alpha",
+  "version": "2.3.1-alpha",
   "description": "A proofing format to make a Graphviz graph of a story.",
   "author": "M. C. DeMarco",
   "license": "MIT",
