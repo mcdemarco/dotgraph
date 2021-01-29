@@ -1892,8 +1892,8 @@ context.story = (function () {
 				newURL = oldURL + "/play";
 			} else if (oldURL.indexOf("itch.io") > 0) {
 				//If itch, try to break out of the frame.
-				newURL = this.response.querySelector('iframe[src]').getAttribute('src');
-				//Itch seems to be all https, and the src to lack a protocol.
+				newURL = this.response.querySelector('iframe[src]') ? this.response.querySelector('iframe[src]').getAttribute('src') : new DOMParser().parseFromString(this.response.querySelector('div.iframe_placeholder').getAttribute('data-iframe'), 'text/html').body.childNodes[0].getAttribute('src');
+				//Regardless of format, itch seems to be all https, and the src to lack a protocol.
 				if (newURL.indexOf("http") < 0)
 					newURL = "https:" + newURL;
 			} else if (oldURL.indexOf("ifdb.tads.org") > 0) {
