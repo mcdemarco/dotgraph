@@ -43,6 +43,7 @@ module.exports = function(grunt) {
 			name: '{{STORY_NAME}}',
 			passages: '{{STORY_DATA}}',
 			vizScript: '<script src="https://mcdemarco.net/tools/viz/viz.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/full.render.js" type="text/javascript"></script>',
+			d3Script: '<script src="https://mcdemarco.net/tools/viz/d3.v5.min.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/dagre-d3.min.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -56,6 +57,7 @@ module.exports = function(grunt) {
 			name: '{{STORY_NAME}}',
 			passages: '{{STORY_DATA}}',
 			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script><script>'  + grunt.file.read('lib/full.render.js') + '</script>',
+			d3Script: '<!-- d3 is only available in online mode -->',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -69,6 +71,7 @@ module.exports = function(grunt) {
 			name: 'DotGraph',
 			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
 			vizScript: '<script src="https://mcdemarco.net/tools/viz/viz.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/full.render.js" type="text/javascript"></script>',
+			d3Script: '<script src="https://mcdemarco.net/tools/viz/d3.v5.min.js" type="text/javascript"></script><script src="https://mcdemarco.net/tools/viz/dagre-d3.min.js" type="text/javascript"></script>',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
@@ -82,6 +85,7 @@ module.exports = function(grunt) {
 			name: 'DotGraph',
 			passages: '<div id="storeArea" data-size="STORY_SIZE" hidden>"STORY"</div>',
 			vizScript: '<script>'  + grunt.file.read('lib/viz.js') + '</script><script>'  + grunt.file.read('lib/full.render.js') + '</script>',
+			d3Script: '<!-- d3 is only available in online mode -->',
 			script: '<script>' + grunt.file.read('build/dotgraph.js') + '</script>'
 		};
 
