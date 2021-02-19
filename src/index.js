@@ -7,7 +7,8 @@ var dotGraph = {};
 	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
 	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
-	var config = {checkpoint: true,
+	var config = {appendix: "",
+								checkpoint: true,
 								checkpointTag: "checkpoint",
 								cluster: false,
 								clusterTags: [],
@@ -179,7 +180,7 @@ context.dot = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix;
+			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 		return scrub(name);
 	}
 
@@ -337,9 +338,9 @@ context.dot = (function() {
 		}
 
 		//Rename the node if a label or prefix was passed in.
-		if (label || config.prefix || config.postfix) {
+		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				styles.push("label=\"" + config.prefix + label + config.postfix + "\"");
+				styles.push("label=\"" + config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "") + "\"");
 			else
 				styles.push("label=" + getNameOrPid(passage, false, false, true));
 		}
@@ -470,7 +471,7 @@ context.gml = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix;
+			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 		return scrub(name);
 	}
 
@@ -558,9 +559,9 @@ context.gml = (function() {
 
 	function stylePassage(passage, label) {
 		//Cut down from the usual full styling to return the label only.
-		if (label || config.prefix || config.postfix) {
+		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				label = '"' + config.prefix + label + config.postfix + '"';
+				label = '"' + config.prefix + label + config.postfix  + (config.appendix ? "\n" + config.appendix : "") + '"';
 			else
 				label = getNameOrPid(passage, false, false, true);
 		} else 
@@ -636,7 +637,7 @@ context.graphml = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix;
+			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 		return scrub(name);
 	}
 
@@ -826,9 +827,9 @@ context.graphml = (function() {
 		styles.push('\t</data>');
 
 		//Rename the node if a label or prefix was passed in.
-		if (label || config.prefix || config.postfix) {
+		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				label = config.prefix + label + config.postfix;
+				label = config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 			else
 				label = getNameOrPid(passage, false, false, true);
 		} else 
@@ -1026,7 +1027,7 @@ context.json = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix;
+			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 		return scrub(name);
 	}
 
@@ -1237,9 +1238,9 @@ context.json = (function() {
 			styles.color = config.paletteExceptions.default;
 		}
 
-		if (label || config.prefix || config.postfix) {
+		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				styles.label = config.prefix + label + config.postfix;
+				styles.label = config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "");
 			else
 				styles.label = getNameOrPid(passage, false, false, true);
 		} else 
