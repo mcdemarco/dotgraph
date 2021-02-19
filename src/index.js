@@ -95,6 +95,7 @@ var dotGraph = {};
 //passage
 //settings
 //story
+//tags
 
 context.dot = (function() {
 
@@ -298,11 +299,9 @@ context.dot = (function() {
 			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
 			styles.push("fillcolor=\"" + hue + ",0.66,0.85\"");
 		} else if (config.color == "tag" && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
-			styles.push("fillcolor=\"" + hue + "\"");
-			styles.push("fontcolor=\"" + config.paletteContrastColors[indx%26] + "\"");
+			var tagColor = context.tags.getColor(tag);
+			styles.push("fillcolor=\"" + tagColor.hue + "\"");
+			styles.push("fontcolor=\"" + tagColor.contrast + "\"");
 		} else if (config.color == "tag") {
 			//No fill for you!
  		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
@@ -367,7 +366,7 @@ context.dot = (function() {
 		var clusters = [];
 		var clusterIndex = 0;
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
+			if (tagObject.hasOwnProperty(tag) && !context.tags.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
 				clusters.push("subgraph cluster_" + clusterIndex + " {");
 				clusters.push("label=" + scrub(tag));
 				clusters.push("style=\"rounded, filled\" fillcolor=\"ivory\"");
@@ -389,10 +388,12 @@ context.dot = (function() {
 
 		var tagName, tagId;
 		for (var t=0; t<story.tags.length; t++) {
-			if (!context.settings.isOmittedTag(storyObj.tags[t])) {
-				tagName = scrub(storyObj.tags[t]);
+			var tag = storyObj.tags[t];
+			if (!context.tags.isOmittedTag(tag)) {
+				tagColor = context.tags.getColor(tag);
+				tagName = scrub(tag);
 				tagId = "tagKeyNodeID_" + t;
-				tagKey.push(tagId +  " [label=" + tagName + " shape=rect style=\"filled,rounded\" fillcolor=\"" + settings.palette[t%26] + "\" fontcolor=\"" + settings.paletteContrastColors[t%26] + "\"]");
+				tagKey.push(tagId +  " [label=" + tagName + " shape=rect style=\"filled,rounded\" fillcolor=\"" + tagColor.hue + "\" fontcolor=\"" + tagColor.contrast + "\"]");
 			}
 		}
 		tagKey.push("}");
@@ -401,7 +402,7 @@ context.dot = (function() {
 
 		//Dot hackery: invisible graphing to keep things lined up.
 		for (t=0; t<story.tags.length; t++) {
-			if (!context.settings.isOmittedTag(story.tags[t]))
+			if (!context.tags.isOmittedTag(story.tags[t]))
 				tagId = "tagKeyNodeID_" + t;
 				tagKey.push(tagId + " -> " + startName + " [style=invis]");
 		}
@@ -781,11 +782,9 @@ context.graphml = (function() {
 			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
 			color = makeRGB(hue,0.66,0.85);
 		} else if (config.color == "tag" && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
- 			color = hue;
-			contrastColor = config.paletteContrastColors[indx%26];
+			var tagColor = context.tags.getColor(tag);
+ 			color = tagColor.hue;
+			contrastColor = tagColor.contrast;
 		} else if (config.color == "tag") {
 			//No fill for you!
  		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
@@ -1201,11 +1200,9 @@ context.json = (function() {
 			hue = Math.round(100 * (Math.min(1.75, passage.textLength / storyObj.avLength)) / 3)/100;
 			styles.color = makeRGB(hue,0.66,0.85);
 		} else if (config.color == "tag" && tag) {
-			var indx = storyObj.tags.indexOf(tag);
-			if (indx > -1)
-				hue = config.palette[indx%26]; //color alphabet colors
- 			styles.color = hue;
-			styles.contrastColor = config.paletteContrastColors[indx%26];
+			var tagColor = context.tags.getColor(tag);
+ 			styles.color = tagColor.hue;
+			styles.contrastColor = tagColor.contrast;
 		} else if (config.color == "tag") {
 			//No fill for you!
  		} else if (config.snowstick && passage.ssLeaf && ((config.ends && context.passage.hasTag(passage, config.endTag)) || passage.leaf)) {
@@ -1262,12 +1259,13 @@ context.json = (function() {
 		var cluster;
 
 		for (var tag in tagObject) {
-			if (tagObject.hasOwnProperty(tag) && !context.settings.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
+			if (tagObject.hasOwnProperty(tag) && !context.tags.isOmittedTag(tag) && (config.clusterTags.length == 0 || config.clusterTags.indexOf(tag) > -1)) {
+				var tagColor = context.tags.getColor(tag);
 				cluster = {
 					id: "c" + clusterIndex,
 					name: scrub(tag),
-					color: config.palette[clusterIndex%26],
-					contrastColor: config.paletteContrastColors[clusterIndex%26]
+					color: tagColor.hue,
+					contrastColor: tagColor.contrast
 				};
 				clusters.push(cluster);
 				clusterIndex++;
@@ -1454,10 +1452,10 @@ context.passage = (function() {
 		//Make it like Twine2.
 		passageObj.pid = source.getAttribute("pid") ? source.getAttribute("pid") : index;
 		passageObj.tagArray = tagArray;
-		passageObj.theTag = getTheTag(tagArray);
+		passageObj.theTag = context.tags.getTheTag(tagArray);
 		passageObj.name = source.getAttribute("name") ? source.getAttribute("name") : (source.getAttribute("tiddler") ? source.getAttribute("tiddler") : "Untitled Passage");
 		passageObj.special = (specialPassageList.indexOf(passageObj.name) > -1);
-		passageObj.omit = hasOmittedTag(passageObj);
+		passageObj.omit = context.tags.hasOmittedTag(passageObj);
 		passageObj.trace = (config.trace && source.innerText.indexOf(config.trace) > -1);
 
 		//SnowStick.
@@ -1470,32 +1468,6 @@ context.passage = (function() {
 	}
 
 	//Private	
-	function getTheTag(tags) {
-		var tagArray = tags.slice(0);
-		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
-			tagArray.splice(tagArray.indexOf(config.endTag), 1);
-		}
-		if (config.checkpoints && tagArray.indexOf(config.checkpointTag) > -1)
-			tagArray.splice(tagArray.indexOf(config.checkpointTag), 1);
-		if (tagArray.length && config.lastTag) 
-			return tagArray[tagArray.length - 1];
-		else if (tagArray.length)
-			return tagArray[0];
-		else
-			return "";
-	}
-
-	function hasOmittedTag(passage) {
-		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
-			return false;
-		else {
-			for (var t=0; t<passage.tagArray.length; t++) {
-				if (context.settings.isOmittedTag(passage.tagArray[t]))
-					return true;
-			}
-			return false;
-		}
-	}
 
 	function parseLink(target, type) {
 		//Parsing code for the various formats, adapted from Snowman.
@@ -1575,7 +1547,6 @@ context.settings = (function () {
 	return {
 		bookmark: bookmark,
 		ifid: ifid,
-		isOmittedTag: isOmittedTag,
 		load: load,
 		parse: parse,
 		scale: scale,
@@ -1607,18 +1578,6 @@ context.settings = (function () {
 		return window.document.querySelector('tw-storydata') ? window.document.querySelector('tw-storydata').getAttribute('ifid').toUpperCase() : "";
 	};
 
-	function isOmittedTag(tag) {
-		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
-			return false;
-		else {
-			if (config.omitTags.indexOf(tag) > -1)
-				return true;
-			if (config.omitSpecialTags && specialTagList.indexOf(tag) > -1)
-				return true;
-		}
-		return false;
-	}
-
 	function load() {
 		//Check localStorage for snowstick.
 		try {
@@ -1632,28 +1591,7 @@ context.settings = (function () {
 			console.log("Error checking local storage for SnowStick data: " + e.description);
 		}
 
-		//Check story for settings.
-		var DotGraphSettings;
-		if (window.document.getElementById("storeArea"))
-			DotGraphSettings = window.document.getElementById("storeArea").querySelector('div[tiddler="DotGraphSettings"]');
-		else 
-			DotGraphSettings = window.document.querySelector('tw-passagedata[name="DotGraphSettings"]');
-
-		if (DotGraphSettings) {
-			//Don't require dotgraph: label or single-line layout but must still parse as a JSON object.
-			dgSettings = DotGraphSettings.innerText;
-		} else {
-			//Parse the StorySettings for dotgraph presets.  May fail mysteriously under Tweego 1.3.
-			var StorySettings, dgSettings;
-			if (window.document.getElementById("storeArea"))
-				StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
-			else 
-				StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
-		
-			if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
-				dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
-			}
-		}
+		var dgSettings = getDgSettings();
 
 		if (dgSettings) {
 			try {
@@ -1797,6 +1735,33 @@ context.settings = (function () {
 	function derive() {
 		//Should also cover the exceptions, but haven't done them yet.
 		config.paletteContrastColors = config.palette.map(function(color) {return context.graph.contrastColor(color);});
+		setTagColors();
+	}
+
+	function getDgSettings() { 
+		//Check story for settings.
+		var DotGraphSettings, StorySettings, dgSettings;
+
+		if (window.document.getElementById("storeArea"))
+			DotGraphSettings = window.document.getElementById("storeArea").querySelector('div[tiddler="DotGraphSettings"]');
+		else 
+			DotGraphSettings = window.document.querySelector('tw-passagedata[name="DotGraphSettings"]');
+
+		if (DotGraphSettings) {
+			//Don't require dotgraph: label or single-line layout but must still parse as a JSON object.
+			dgSettings = DotGraphSettings.innerText;
+		} else {
+			//Parse the StorySettings for dotgraph presets.  May fail mysteriously under Tweego 1.3.
+			if (window.document.getElementById("storeArea"))
+				StorySettings = window.document.getElementById("storeArea").querySelector('div[tiddler="StorySettings"]');
+			else
+				StorySettings = window.document.querySelector('tw-passagedata[name="StorySettings"]');
+		
+			if (StorySettings && StorySettings.innerText && StorySettings.innerText.indexOf("dotgraph:") > -1) {
+				dgSettings = (StorySettings.innerText.split("dotgraph:")[1]).split("\n")[0];
+			}
+		}
+		return dgSettings
 	}
 
 	function save() {
@@ -1809,6 +1774,38 @@ context.settings = (function () {
 
 		//Also display the settings as a passage with JSON for the user to save in their story.
 		show();
+	}
+
+	function setTagColors() {
+		var dgSettings;
+		try {
+			dgSettings = JSON.parse(getDgSettings());
+		} catch (e) {
+
+		}
+
+		var twineTags = document.querySelectorAll("tw-tag");
+		if (dgSettings && dgSettings.hasOwnProperty("tag-colors")) {
+			//If tag-colors are set in dgSettings itself, use them.
+			config.tagColors = JSON.parse(JSON.stringify(dgSettings["tag-colors"]));
+		} else if (twineTags.length > 0) {
+			//If not but in StoryData (that is, in the tw-tags tags), use that.
+			config.tagColors = {};
+			twineTags.forEach(function(elt) {
+				config.tagColors[elt.getAttribute("name")] = elt.getAttribute("color");
+			});
+		} else {
+			//If neither, use the palette colors normally.
+			return;
+		}
+
+		config.tagContrastColors = {};
+		for (var tag in config.tagColors) {
+			if (config.tagColors.hasOwnProperty(tag)) {
+				config.tagContrastColors[tag] = context.graph.contrastColor(config.tagColors[tag]);
+			}
+		}
+		//It would be better not to store or retrieve these values in localStorage.
 	}
 
 	function show() {
@@ -2047,6 +2044,76 @@ context.story = (function () {
 		document.getElementById("average").innerHTML = Math.round(100 * (storyObj.links / Math.max(storyObj.passages.length,1)))/100;
 
 		document.getElementById("stats").setAttribute("title","Twine " + storyObj.twineVersion);
+	}
+
+})();
+
+context.tags = (function () {
+
+	return {
+		getColor: getColor,
+		getTheTag: getTheTag,
+		hasOmittedTag: hasOmittedTag,
+		isOmittedTag: isOmittedTag
+	};
+
+	function getColor(tag) {
+		//Default to unstyled.
+		var tagColor = {hue: "white", contrast: "black"};
+		//Use config.tagColors if present.
+		if (config.hasOwnProperty("tagColors")) {
+			if (config.tagColors.hasOwnProperty(tag)) {
+				tagColor.hue = config.tagColors[tag];
+				tagColor.contrast = config.tagContrastColors[tag];
+			}
+		} else {
+			//Use the palette colors.
+			var indx = storyObj.tags.indexOf(tag);
+			if (indx > -1) {
+				tagColor.hue = config.palette[indx%26]; //color alphabet colors
+				tagColor.contrast = config.paletteContrastColors[indx%26];
+			}
+		}
+		return tagColor;
+	}
+
+	function getTheTag(tags) {
+		var tagArray = tags.slice(0);
+		if (config.ends && tagArray.indexOf(config.endTag) > -1) {
+			tagArray.splice(tagArray.indexOf(config.endTag), 1);
+		}
+		if (config.checkpoints && tagArray.indexOf(config.checkpointTag) > -1)
+			tagArray.splice(tagArray.indexOf(config.checkpointTag), 1);
+		if (tagArray.length && config.lastTag)
+			return tagArray[tagArray.length - 1];
+		else if (tagArray.length)
+			return tagArray[0];
+		else
+			return "";
+	}
+
+	function hasOmittedTag(passage) {
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
+			return false;
+		else {
+			for (var t=0; t<passage.tagArray.length; t++) {
+				if (isOmittedTag(passage.tagArray[t]))
+					return true;
+			}
+			return false;
+		}
+	}
+
+	function isOmittedTag(tag) {
+		if (config.omitTags.length == 0 && config.omitSpecialTags == false) 
+			return false;
+		else {
+			if (config.omitTags.indexOf(tag) > -1)
+				return true;
+			if (config.omitSpecialTags && specialTagList.indexOf(tag) > -1)
+				return true;
+		}
+		return false;
 	}
 
 })();
