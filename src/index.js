@@ -1528,8 +1528,11 @@ context.passage = (function() {
 	function parseLinks(content) {
 		var linkList = [];
 		var re = /\[\[(.*?)\]\]/g;
-		var re2 = /\<\<display \"(.*?)\"\>\>/g;
-		var re3 = /\(display: \"(.*?)\"\)/g;
+		var reD1 = /\<\<display \"(.*?)\"\>\>/g;
+		var reD2 = /\(display: \"(.*?)\"\)/g;
+		var reI1 = /\<\<include \"(.*?)\"( \".*\")?\>\>/g;
+		//A SugarCube include format that will be picked up as direct link without more complicated regexes (TODO):
+		//var reI2 = /\<\<include \[\[(.*?)\]\]( \".*\")?\>\>/g;
 		var targetArray, target, target2;
 		if (content) {
 			//Clean up the content a bit (snowman), then extract links.
@@ -1547,21 +1550,23 @@ context.passage = (function() {
 				}
 			}
 			if (config.display) {
-				while ((targetArray = re2.exec(content)) !== null) {
+				while ((targetArray = reD1.exec(content)) !== null) {
 					target2 = parseLink(targetArray[1],1);
 					if (/^\w+:\/\/\/?\w/i.test(target2)) {
-						// do nothing with external links
+						// do nothing with external links (can they occur?)
 					}	else {
 						linkList.push(target2);
 					}
 				}
-				while ((targetArray = re3.exec(content)) !== null) {
+				while ((targetArray = reD2.exec(content)) !== null) {
 					target2 = parseLink(targetArray[1],1);
-					if (/^\w+:\/\/\/?\w/i.test(target2)) {
-						// do nothing with external links
-					}	else {
-						linkList.push(target2);
-					}
+					// do not expect external links here in Harlowe.
+					linkList.push(target2);
+				}
+				while ((targetArray = reI1.exec(content)) !== null) {
+					target2 = parseLink(targetArray[1],1);
+					// do not expect external links here in SugarCube.
+					linkList.push(target2);
 				}
 			}
 		}
@@ -1767,7 +1772,7 @@ context.settings = (function () {
 			<input type="radio" id="colorCheckbox1" name="colorCheckbox" value="length" <%= (color == "length" ? "checked" : "")%> />&nbsp;<label for="colorCheckbox1">Color by node length</label> \
 			<input type="radio" id="colorCheckbox2" name="colorCheckbox" value="tag" <%= (color == "tag" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox2">Color by tag</label> ' + 
 			(config.snowstick ? '<input type="radio" id="colorCheckbox3" name="colorCheckbox" value="snow" <%= (color == "snow" ? "checked" : "")%>/>&nbsp;<label for="colorCheckbox3" title="SnowStick">Color by read state</label>' : '') + '<br/> \
-			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Include display macro links</label> \
+			<input type="checkbox" id="displayCheckbox" name="displayCheckbox" checked/>&nbsp;<label for="displayCheckbox">Show display/include macros as links</label> \
 			<input type="checkbox" id="wcCheckbox" name="wcCheckbox" <%= (countWords ? "checked" : "") %> />&nbsp;<label for="wcCheckbox">Include word counts (hover)</label><br/> \
 			<input type="checkbox" id="specialCheckbox" <%= (omitSpecialPassages ? "checked" : "") %> />&nbsp;<label for="specialCheckbox">Omit&nbsp;special&nbsp;passages</label> (StoryTitle,&nbsp;etc.) \
 			<input type="checkbox" id="specialTagCheckbox" <%= (omitSpecialTags ? "checked" : "") %> />&nbsp;<label for="specialTagCheckbox">Omit&nbsp;by&nbsp;special&nbsp;tags</label> (script,&nbsp;etc.)<br/> \
