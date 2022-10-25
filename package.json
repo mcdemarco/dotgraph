@@ -7,17 +7,16 @@
   "repository": "https://bitbucket.org/mcdemarco/dotgraph",
   "dependencies": {
     "filesaver.js-npm": "1.0.1",
-    "underscore": "^1.8.3"
+    "underscore": "^1.13.6"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-browserify": "^4.0.1",
-    "grunt-contrib-clean": "^0.7.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-contrib-yuidoc": "^0.10.0",
-    "grunt-contrib-compress": "^1.6.0",
-    "grunt-eslint": "^18.0.0",
-    "jit-grunt": "^0.9.1",
-    "uglifyify": "^3.0.1"
+    "grunt": "^1.4.1",
+    "grunt-browserify": "^6.0.0",
+    "grunt-contrib-clean": "^2.0.0",
+    "grunt-contrib-compress": "^2.0.0",
+    "grunt-contrib-watch": "^1.1.0",
+    "grunt-eslint": "^24.0.0",
+    "jit-grunt": "^0.10.0",
+    "uglifyify": "^4.0.5"
   }
 }
