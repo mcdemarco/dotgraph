@@ -4,7 +4,7 @@ var dotGraph = {};
 
 (function(context) {
 
-	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
+	var corsProxy = "https://cors.sh/"; // "https://cors-anywhere.herokuapp.com/" is no longer open, unfortunately.
 	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
 	var config = {checkpoint: true,
@@ -1859,10 +1859,11 @@ context.story = (function () {
 		if (!retry)
 			document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + theURL + "</tt> ...<span id='loadingResult' style='color:tomato;'></span><p>";
 
-		//Get the URL.  Some sites might not need the proxy, and in general it would be better to fail over them.
+		//Get the URL.  Use my proxy for known IF sites, and a public one for any other URLs.
+		//Some sites might not need the proxy, but there's no test for that here yet.
 		if (!theURL)
 			return;
-		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0) 
+		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io/") > 0) 
 			theURL = ttCorsProxy + theURL;
 		else
 			theURL = corsProxy + theURL;
