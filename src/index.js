@@ -4,7 +4,7 @@ var dotGraph = {};
 
 (function(context) {
 
-	var corsProxy = "https://cors.sh/"; // "https://cors-anywhere.herokuapp.com/" is no longer open, unfortunately.
+	var corsProxy = "https://corsproxy.io/?"; // "https://cors-anywhere.herokuapp.com/" is no longer open, unfortunately.
 	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
 	var config = {checkpoint: true,
@@ -1863,10 +1863,10 @@ context.story = (function () {
 		//Some sites might not need the proxy, but there's no test for that here yet.
 		if (!theURL)
 			return;
-		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io/") > 0) 
+		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io") > 0) 
 			theURL = ttCorsProxy + theURL;
 		else
-			theURL = corsProxy + theURL;
+			theURL = corsProxy + encodeURIComponent(theURL);
 
 		var xhr = new XMLHttpRequest();
 		xhr.onreadystatechange = loadListener;
