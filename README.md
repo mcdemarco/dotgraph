@@ -34,7 +34,7 @@ in that case it will still give you the text of the dot source file, as well as 
 
 DotGraph may fail to save the SVG in Safari; if it fails, try a different browser.
 
-For more troubleshooting, help, and examples, see [the DotGraph website](mcdemarco.net/tools/scree/dotgraph/).
+For more troubleshooting, help, and examples, see [the DotGraph website](http://mcdemarco.net/tools/scree/dotgraph/).
 
 ## SnowStick
 
