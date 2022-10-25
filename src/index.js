@@ -4,7 +4,7 @@ var dotGraph = {};
 
 (function(context) {
 
-	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is being blocked by t.co and tads.org, unfortunately.
+	var corsProxy = "https://cors-anywhere.herokuapp.com/"; //is no longer open, unfortunately.
 	var ttCorsProxy = "https://mcdemarco.net/games/bgg/proxy.php?csurl="; //only permits t.co, tads.org, and similar.
 
 	var config = {appendix: "",
@@ -19,6 +19,7 @@ var dotGraph = {};
 								ends: true,
 								endTag: "end",
 								engine: "dot",
+								extractLength: 33,
 								hideSource: false,
 								hideSettings: false,
 								increment: 0.2,
@@ -180,7 +181,7 @@ context.dot = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+			name = config.prefix + name + config.postfix + context.graph.append(passage);
 		return scrub(name);
 	}
 
@@ -340,7 +341,7 @@ context.dot = (function() {
 		//Rename the node if a label or prefix was passed in.
 		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				styles.push("label=\"" + config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "") + "\"");
+				styles.push("label=\"" + config.prefix + label + config.postfix + context.graph.append(passage));
 			else
 				styles.push("label=" + getNameOrPid(passage, false, false, true));
 		}
@@ -471,7 +472,7 @@ context.gml = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+			name = config.prefix + name + config.postfix + context.graph.append(passage);
 		return scrub(name);
 	}
 
@@ -561,7 +562,7 @@ context.gml = (function() {
 		//Cut down from the usual full styling to return the label only.
 		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				label = '"' + config.prefix + label + config.postfix  + (config.appendix ? "\n" + config.appendix : "") + '"';
+				label = '"' + config.prefix + label + config.postfix + context.graph.append(passage);
 			else
 				label = getNameOrPid(passage, false, false, true);
 		} else 
@@ -637,7 +638,7 @@ context.graphml = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+			name = config.prefix + name + config.postfix + context.graph.append(passage);
 		return scrub(name);
 	}
 
@@ -829,7 +830,7 @@ context.graphml = (function() {
 		//Rename the node if a label or prefix was passed in.
 		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				label = config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+				label = config.prefix + label + config.postfix + context.graph.append(passage);
 			else
 				label = getNameOrPid(passage, false, false, true);
 		} else 
@@ -1027,7 +1028,7 @@ context.json = (function() {
 		if (withCount && config.countWords)
 			name += " (" + passage.wordCount + " word" + (passage.wordCount == 1 ? "" : "s") + ")";
 		if (withAffix)
-			name = config.prefix + name + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+			name = config.prefix + name + config.postfix + context.graph.append(passage);
 		return scrub(name);
 	}
 
@@ -1240,7 +1241,7 @@ context.json = (function() {
 
 		if (label || config.prefix || config.postfix || config.appendix) {
 			if (label)
-				styles.label = config.prefix + label + config.postfix + (config.appendix ? "\n" + config.appendix : "");
+				styles.label = config.prefix + label + config.postfix + context.graph.append(passage);
 			else
 				styles.label = getNameOrPid(passage, false, false, true);
 		} else 
@@ -1280,6 +1281,7 @@ context.json = (function() {
 context.graph = (function() {
 
 	return {
+		append: append,
 		contrastColor: contrastColor,
 		convert: convert,
 		render: render,
@@ -1287,6 +1289,20 @@ context.graph = (function() {
 		saveSvg: saveSvg,
 		scale: scale
 	};
+
+	function append(passage) {
+		if (!config.appendix)
+			return "";
+		var appendMe = "\n";
+		if (config.appendix == "tags")
+			appendMe += (passage.tagArray.length ? "🏷️ " : "") + passage.tagArray.join(" ");
+		else if (config.appendix == "extract")
+			appendMe += sanitizeAndTrim(passage.content,config.extractLength);
+		else
+			appendMe += config.appendix;
+
+		return appendMe;
+	}
 
 	function contrastColor(color) {
 		//color is an RGB color in the formats #abcdef or #abc (not clear that one can have worked).
@@ -1376,6 +1392,15 @@ context.graph = (function() {
 		}
 		svgElt.setAttribute("width",config.scale);
 		document.getElementById("scaleInput").value = config.scale;
+	}
+
+	//private
+
+	function sanitizeAndTrim(text,length) {
+		var sanitized = text.replace(/[\W]/g, " ");
+		if (sanitized.length > length)
+			sanitized = sanitized.substring(0,length) + "…";
+		return sanitized;
 	}
 
 })();
@@ -1862,8 +1887,9 @@ context.story = (function () {
 			return;
 		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0) 
 			theURL = ttCorsProxy + theURL;
-		else
-			theURL = corsProxy + theURL;
+		else if (theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0) 
+			theURL = ttCorsProxy + theURL;
+		//else don't attempt to proxy?
 
 		var xhr = new XMLHttpRequest();
 		xhr.onreadystatechange = loadListener;
