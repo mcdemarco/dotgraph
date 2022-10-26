@@ -1863,7 +1863,7 @@ context.story = (function () {
 		//Some sites might not need the proxy, but there's no test for that here yet.
 		if (!theURL)
 			return;
-		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io") > 0) 
+		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io") > 0)
 			theURL = ttCorsProxy + theURL;
 		else
 			theURL = corsProxy + encodeURIComponent(theURL);
@@ -1894,8 +1894,8 @@ context.story = (function () {
 				if (_temp)
 					newURL = _temp.split(";URL=")[1];
 			} else if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
-				//Fix philome.la links.
-				newURL = oldURL + "/play";
+				//Press play on philome.la links.
+				newURL = oldURL.split("/index.html")[0] + "/play";
 			} else if (oldURL.indexOf("itch.io") > 0) {
 				//If itch, try to break out of the frame.
 				newURL = this.response.querySelector('iframe[src]') ? this.response.querySelector('iframe[src]').getAttribute('src') : new DOMParser().parseFromString(this.response.querySelector('div.iframe_placeholder').getAttribute('data-iframe'), 'text/html').body.childNodes[0].getAttribute('src');
