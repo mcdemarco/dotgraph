@@ -1853,17 +1853,28 @@ context.story = (function () {
 
 	function load(theURL,retry) {
 		//Load a story from a URL.
+
 		//Clear now for clarity.
 		if (document.querySelector('tw-storydata, div#storeArea'))
 			document.querySelector('tw-storydata, div#storeArea').remove();
 		if (!retry)
 			document.getElementById("graph").innerHTML = "<p style='text-align:center;'><i>Loading</i> <tt>" + theURL + "</tt> ...<span id='loadingResult' style='color:tomato;'></span><p>";
 
-		//Get the URL.  Use my proxy for known IF sites, and a public one for any other URLs.
-		//Some sites might not need the proxy, but there's no test for that here yet.
+		//Get the URL.
 		if (!theURL)
 			return;
-		if (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io") > 0)
+
+		//Correct philome.la links here instead of in the listener.  (Skip to play.)
+		if (theURL.indexOf("philome.la/") > -1) {
+			//Corrects several potential issues with the URL to avoid CORS-breaking redirects.
+ 			var s = theURL.split("/");
+			//domain, username, story name
+			theURL = "https://" + s[2] + "/" + s[3] +  "/" + s[4] + "/play/index.html";
+		}
+
+		//Use my proxy for my DGaaS against known IF sites, and a public one for any other case.
+		//Some sites might not need a proxy, but there's no test for that here yet.
+		if ( location.hostname == "mcdemarco.net" && (theURL.indexOf("t.co/") > 0 || theURL.indexOf("tads.org/") > 0 || theURL.indexOf("itch.io/") > 0 || theURL.indexOf("philome.la/") > 0 || theURL.indexOf("borogove.io") > 0))
 			theURL = ttCorsProxy + theURL;
 		else
 			theURL = corsProxy + encodeURIComponent(theURL);
@@ -1882,33 +1893,38 @@ context.story = (function () {
 			return;
 		}
 
+		console.log(this.response);
+
 		var _story = this.response.querySelector('tw-storydata, div#storeArea');
 		if (!_story) {
+			console.log("no story found");
 			var newURL;
 			//Most browsers support responseURL so didn't bother to bind the original URL.
 			var oldURL = this.response.url ? this.response.url : (this.responseURL ?  this.responseURL : "");
 			var _meta = this.response.querySelector('meta[http-equiv=refresh]');
 			if (_meta) {
+				console.log("is meta");
 				//Read the refresh manually.
 				var _temp = this.response.querySelector('meta[http-equiv=refresh]').getAttribute('content');
 				if (_temp)
 					newURL = _temp.split(";URL=")[1];
-			} else if (oldURL.indexOf("philome.la/") > -1 && oldURL.indexOf("/play") < 0) {
-				//Press play on philome.la links.
-				newURL = oldURL.split("/index.html")[0] + "/play";
 			} else if (oldURL.indexOf("itch.io") > 0) {
+				console.log("is itch check for frame");
 				//If itch, try to break out of the frame.
 				newURL = this.response.querySelector('iframe[src]') ? this.response.querySelector('iframe[src]').getAttribute('src') : new DOMParser().parseFromString(this.response.querySelector('div.iframe_placeholder').getAttribute('data-iframe'), 'text/html').body.childNodes[0].getAttribute('src');
 				//Regardless of format, itch seems to be all https, and the src to lack a protocol.
 				if (newURL.indexOf("http") < 0)
 					newURL = "https:" + newURL;
 			} else if (oldURL.indexOf("ifdb.tads.org") > 0) {
-				//also blocking the cors server.
+				//also blocking the cors server?
+				console.log("is tads check for link");
 				newURL = this.response.querySelector('div#links-div a'); 
 				if (newURL)
 					newURL = newURL.getAttribute('href');
 			}
 			
+			console.log(newURL);
+
 			if (newURL)
 				context.story.load(newURL,true);
 			else
