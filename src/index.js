@@ -62,7 +62,7 @@ var dotGraph = {};
 														"StoryColophon",
 														"StoryBanner", "StoryCaption", "StoryInit", "StoryShare", 
 														"PassageDone", "PassageFooter", "PassageHeader", "PassageReady",
-														"MenuOptions", "MenuShare", "DotGraphSettings"];
+														"MenuOptions", "MenuShare", "DotGraphSettings", "PrePubSettings"];
 
 	var specialTagList = ["annotation", "debug-footer", "debug-header", "debug-startup", 
 												"footer", "haml", "header", "script", "startup", "stylesheet", 
